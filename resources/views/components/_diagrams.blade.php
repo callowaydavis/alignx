@@ -1,98 +1,4 @@
-@php
-    // Build nodes (deduplicated)
-    $diagramNodes = collect();
-    $diagramEdges = collect();
-
-    $diagramNodes->push([
-        'id' => 'c' . $component->id,
-        'name' => $component->name,
-        'type' => $component->type->value,
-        'isRoot' => true,
-    ]);
-
-    foreach ($component->outgoingRelationships as $rel) {
-        $target = $rel->targetComponent;
-        $diagramNodes->push([
-            'id' => 'c' . $target->id,
-            'name' => $target->name,
-            'type' => $target->type->value,
-            'isRoot' => false,
-        ]);
-        $diagramEdges->push([
-            'id' => 'r' . $rel->id,
-            'source' => 'c' . $component->id,
-            'target' => 'c' . $target->id,
-            'label' => $rel->relationship_type ?? '',
-        ]);
-    }
-
-    foreach ($component->incomingRelationships as $rel) {
-        $source = $rel->sourceComponent;
-        $diagramNodes->push([
-            'id' => 'c' . $source->id,
-            'name' => $source->name,
-            'type' => $source->type->value,
-            'isRoot' => false,
-        ]);
-        $diagramEdges->push([
-            'id' => 'r' . $rel->id,
-            'source' => 'c' . $source->id,
-            'target' => 'c' . $component->id,
-            'label' => $rel->relationship_type ?? '',
-        ]);
-    }
-
-    foreach ($component->subcomponents as $sub) {
-        $diagramNodes->push([
-            'id' => 'c' . $sub->id,
-            'name' => $sub->name,
-            'type' => $sub->type->value,
-            'isRoot' => false,
-            'isSub' => true,
-        ]);
-        $diagramEdges->push([
-            'id' => 'sub' . $sub->id,
-            'source' => 'c' . $component->id,
-            'target' => 'c' . $sub->id,
-            'label' => 'contains',
-        ]);
-    }
-
-    $diagramNodes = $diagramNodes->unique('id')->values();
-
-    $graphData = [
-        'focalId' => 'c' . $component->id,
-        'nodes' => $diagramNodes->toArray(),
-        'edges' => $diagramEdges->toArray(),
-    ];
-
-    // Landscape: group related components by type
-    $landscapeGroups = collect();
-    foreach ($component->outgoingRelationships as $rel) {
-        $type = $rel->targetComponent->type->value;
-        if (! isset($landscapeGroups[$type])) {
-            $landscapeGroups[$type] = collect();
-        }
-        $landscapeGroups[$type]->push([
-            'component' => $rel->targetComponent,
-            'label' => $rel->relationship_type ?? 'relates to',
-            'direction' => 'outgoing',
-        ]);
-    }
-    foreach ($component->incomingRelationships as $rel) {
-        $type = $rel->sourceComponent->type->value;
-        if (! isset($landscapeGroups[$type])) {
-            $landscapeGroups[$type] = collect();
-        }
-        $landscapeGroups[$type]->push([
-            'component' => $rel->sourceComponent,
-            'label' => $rel->relationship_type ?? 'relates to',
-            'direction' => 'incoming',
-        ]);
-    }
-@endphp
-
-@if ($diagramEdges->isEmpty())
+@if ($graphEdges->isEmpty())
     {{-- Empty state --}}
     <div class="bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-20">
         <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +28,7 @@
 
         {{-- Legend --}}
         <div class="flex items-center gap-3 flex-wrap">
-            @foreach ($diagramNodes->where('isRoot', false)->unique('type') as $node)
+            @foreach ($graphNodes->where('isRoot', false)->unique('type') as $node)
                 @php
                     $colors = [
                         'Application' => 'bg-blue-500',

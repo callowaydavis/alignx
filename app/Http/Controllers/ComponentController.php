@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\ComponentType;
 use App\Enums\LifecycleStage;
-use App\Http\Requests\StoreComponentRequest;
 use App\Http\Requests\StoreComponentRelationshipRequest;
+use App\Http\Requests\StoreComponentRequest;
 use App\Http\Requests\UpdateComponentRequest;
 use App\Models\Component;
 use App\Models\ComponentRelationship;
@@ -14,6 +14,7 @@ use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -129,7 +130,10 @@ class ComponentController extends Controller
 
         $audits = $component->audits()->with('user')->latest()->limit(20)->get();
 
-        return view('components.show', compact('component', 'availableFacts', 'availableComponents', 'allTags', 'audits'));
+        ['graphData' => $graphData, 'graphNodes' => $graphNodes, 'graphEdges' => $graphEdges, 'landscapeGroups' => $landscapeGroups]
+            = $this->buildDiagramGraph($component);
+
+        return view('components.show', compact('component', 'availableFacts', 'availableComponents', 'allTags', 'audits', 'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups'));
     }
 
     public function edit(Component $component): View
@@ -225,5 +229,140 @@ class ComponentController extends Controller
 
         return redirect()->route('components.show', $component)
             ->with('success', 'Fact removed successfully.');
+    }
+
+    /**
+     * Build the full diagram graph via BFS, traversing all transitive relationships.
+     *
+     * @return array{graphData: array<string, mixed>, graphNodes: Collection, graphEdges: Collection, landscapeGroups: Collection}
+     */
+    private function buildDiagramGraph(Component $component): array
+    {
+        $nodes = collect();
+        $edges = collect();
+        $landscapeGroups = collect();
+
+        $visited = [$component->id => true];
+
+        // Each queue entry: [Component, direction ('outgoing'|'incoming'|'contains'|null)]
+        $queue = [[$component, null]];
+
+        $nodes->push([
+            'id' => 'c'.$component->id,
+            'name' => $component->name,
+            'type' => $component->type->value,
+            'isRoot' => true,
+        ]);
+
+        while (! empty($queue)) {
+            [$current, $inheritedDirection] = array_shift($queue);
+
+            $current->loadMissing([
+                'outgoingRelationships.targetComponent',
+                'incomingRelationships.sourceComponent',
+                'subcomponents',
+            ]);
+
+            foreach ($current->outgoingRelationships as $rel) {
+                $target = $rel->targetComponent;
+                $edges->push([
+                    'id' => 'r'.$rel->id,
+                    'source' => 'c'.$current->id,
+                    'target' => 'c'.$target->id,
+                    'label' => $rel->relationship_type ?? '',
+                ]);
+
+                if (! isset($visited[$target->id])) {
+                    $visited[$target->id] = true;
+                    $direction = $inheritedDirection ?? 'outgoing';
+                    $nodes->push([
+                        'id' => 'c'.$target->id,
+                        'name' => $target->name,
+                        'type' => $target->type->value,
+                        'isRoot' => false,
+                    ]);
+                    $this->addToLandscapeGroups($landscapeGroups, $target, $rel->relationship_type ?? 'relates to', $direction);
+                    $queue[] = [$target, $direction];
+                }
+            }
+
+            foreach ($current->incomingRelationships as $rel) {
+                $source = $rel->sourceComponent;
+                $edges->push([
+                    'id' => 'r'.$rel->id,
+                    'source' => 'c'.$source->id,
+                    'target' => 'c'.$current->id,
+                    'label' => $rel->relationship_type ?? '',
+                ]);
+
+                if (! isset($visited[$source->id])) {
+                    $visited[$source->id] = true;
+                    $direction = $inheritedDirection ?? 'incoming';
+                    $nodes->push([
+                        'id' => 'c'.$source->id,
+                        'name' => $source->name,
+                        'type' => $source->type->value,
+                        'isRoot' => false,
+                    ]);
+                    $this->addToLandscapeGroups($landscapeGroups, $source, $rel->relationship_type ?? 'relates to', $direction);
+                    $queue[] = [$source, $direction];
+                }
+            }
+
+            foreach ($current->subcomponents as $sub) {
+                $edges->push([
+                    'id' => 'sub'.$sub->id,
+                    'source' => 'c'.$current->id,
+                    'target' => 'c'.$sub->id,
+                    'label' => 'contains',
+                ]);
+
+                if (! isset($visited[$sub->id])) {
+                    $visited[$sub->id] = true;
+                    $direction = $inheritedDirection ?? 'contains';
+                    $nodes->push([
+                        'id' => 'c'.$sub->id,
+                        'name' => $sub->name,
+                        'type' => $sub->type->value,
+                        'isRoot' => false,
+                        'isSub' => true,
+                    ]);
+                    $this->addToLandscapeGroups($landscapeGroups, $sub, 'contains', $direction);
+                    $queue[] = [$sub, $direction];
+                }
+            }
+        }
+
+        $edges = $edges->unique('id')->values();
+
+        return [
+            'graphData' => [
+                'focalId' => 'c'.$component->id,
+                'nodes' => $nodes->values()->toArray(),
+                'edges' => $edges->toArray(),
+            ],
+            'graphNodes' => $nodes,
+            'graphEdges' => $edges,
+            'landscapeGroups' => $landscapeGroups,
+        ];
+    }
+
+    private function addToLandscapeGroups(
+        Collection $groups,
+        Component $component,
+        string $label,
+        string $direction
+    ): void {
+        $type = $component->type->value;
+
+        if (! isset($groups[$type])) {
+            $groups[$type] = collect();
+        }
+
+        $groups[$type]->push([
+            'component' => $component,
+            'label' => $label,
+            'direction' => $direction,
+        ]);
     }
 }

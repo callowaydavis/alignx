@@ -121,4 +121,47 @@ class DiagramTest extends TestCase
         $response->assertSee('Provides');
         $response->assertSee('Feeds');
     }
+
+    public function test_graph_data_includes_transitive_relationships(): void
+    {
+        $app = Component::factory()->create(['name' => 'Application']);
+        $db = Component::factory()->create(['name' => 'Database']);
+        $server = Component::factory()->create(['name' => 'Server']);
+
+        // App -> Database -> Server (two hops from App)
+        ComponentRelationship::factory()->create([
+            'source_component_id' => $app->id,
+            'target_component_id' => $db->id,
+            'relationship_type' => 'Uses',
+        ]);
+        ComponentRelationship::factory()->create([
+            'source_component_id' => $db->id,
+            'target_component_id' => $server->id,
+            'relationship_type' => 'Runs On',
+        ]);
+
+        $response = $this->get(route('components.show', $app));
+
+        $response->assertStatus(200);
+        $response->assertSee('Database');
+        $response->assertSee('Server');
+        $response->assertSee('Runs On');
+    }
+
+    public function test_graph_traversal_does_not_infinite_loop_on_circular_relationships(): void
+    {
+        $a = Component::factory()->create(['name' => 'Component A']);
+        $b = Component::factory()->create(['name' => 'Component B']);
+
+        ComponentRelationship::factory()->create([
+            'source_component_id' => $a->id,
+            'target_component_id' => $b->id,
+        ]);
+        ComponentRelationship::factory()->create([
+            'source_component_id' => $b->id,
+            'target_component_id' => $a->id,
+        ]);
+
+        $this->get(route('components.show', $a))->assertStatus(200);
+    }
 }
