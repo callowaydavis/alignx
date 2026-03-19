@@ -26,7 +26,7 @@
                     <option value="">None (root-level component)</option>
                     @foreach ($parentComponents as $parent)
                         <option value="{{ $parent->id }}" @selected(old('parent_id', $component->parent_id) == $parent->id)>
-                            {{ $parent->name }} ({{ $parent->type->value }})
+                            {{ $parent->name }} ({{ $parent->type }})
                         </option>
                     @endforeach
                 </select>
@@ -45,7 +45,7 @@
                 <select id="type" name="type" required
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 @error('type') border-red-300 @enderror">
                     @foreach ($types as $type)
-                        <option value="{{ $type->value }}" @selected(old('type', $component->type->value) === $type->value)>{{ $type->value }}</option>
+                        <option value="{{ $type->value }}" @selected(old('type', $component->type) === $type->value)>{{ $type->value }}</option>
                     @endforeach
                 </select>
                 @error('type')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror

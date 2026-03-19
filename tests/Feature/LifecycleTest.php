@@ -84,7 +84,7 @@ class LifecycleTest extends TestCase
 
         $response = $this->put(route('components.update', $component), [
             'name' => $component->name,
-            'type' => $component->type->value,
+            'type' => $component->type,
             'lifecycle_stage' => LifecycleStage::PhaseOut->value,
         ]);
 

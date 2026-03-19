@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ComponentType;
 use App\Http\Requests\ImportComponentRequest;
 use App\Models\Component;
+use App\Models\ComponentType;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class ImportController extends Controller
@@ -127,7 +126,7 @@ class ImportController extends Controller
             $errors[] = 'Name is required.';
         }
 
-        $validTypes = array_column(ComponentType::cases(), 'value');
+        $validTypes = ComponentType::query()->pluck('name')->all();
 
         if (empty($data['type']) || ! in_array($data['type'], $validTypes)) {
             $errors[] = "Invalid type: '{$data['type']}'. Must be one of: ".implode(', ', $validTypes).'.';

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ComponentType;
 use App\Enums\LifecycleStage;
 use App\Http\Requests\StoreComponentRelationshipRequest;
 use App\Http\Requests\StoreComponentRequest;
 use App\Http\Requests\UpdateComponentRequest;
 use App\Models\Component;
 use App\Models\ComponentRelationship;
+use App\Models\ComponentType;
 use App\Models\FactDefinition;
 use App\Models\Tag;
 use App\Models\User;
@@ -54,7 +54,7 @@ class ComponentController extends Controller
         }
 
         $components = $query->orderBy('name')->paginate(20)->withQueryString();
-        $types = ComponentType::cases();
+        $types = ComponentType::query()->orderBy('name')->get();
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
 
@@ -65,7 +65,7 @@ class ComponentController extends Controller
     {
         $this->authorize('create', Component::class);
 
-        $types = ComponentType::cases();
+        $types = ComponentType::query()->orderBy('name')->get();
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
         $parentComponents = Component::query()->rootLevel()->orderBy('name')->get();
@@ -112,7 +112,7 @@ class ComponentController extends Controller
         $availableFacts = FactDefinition::query()
             ->where(function ($q) use ($component) {
                 $q->whereNull('component_types')
-                    ->orWhereJsonContains('component_types', $component->type->value);
+                    ->orWhereJsonContains('component_types', $component->type);
             })
             ->whereNotIn('id', $component->facts->pluck('fact_definition_id'))
             ->orderBy('name')
@@ -141,7 +141,7 @@ class ComponentController extends Controller
         $this->authorize('update', $component);
 
         $component->load('tags');
-        $types = ComponentType::cases();
+        $types = ComponentType::query()->orderBy('name')->get();
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
         $parentComponents = Component::query()->rootLevel()->where('id', '!=', $component->id)->orderBy('name')->get();
@@ -250,7 +250,7 @@ class ComponentController extends Controller
         $nodes->push([
             'id' => 'c'.$component->id,
             'name' => $component->name,
-            'type' => $component->type->value,
+            'type' => $component->type,
             'isRoot' => true,
         ]);
 
@@ -278,7 +278,7 @@ class ComponentController extends Controller
                     $nodes->push([
                         'id' => 'c'.$target->id,
                         'name' => $target->name,
-                        'type' => $target->type->value,
+                        'type' => $target->type,
                         'isRoot' => false,
                     ]);
                     $this->addToLandscapeGroups($landscapeGroups, $target, $rel->relationship_type ?? 'relates to', $direction);
@@ -301,7 +301,7 @@ class ComponentController extends Controller
                     $nodes->push([
                         'id' => 'c'.$source->id,
                         'name' => $source->name,
-                        'type' => $source->type->value,
+                        'type' => $source->type,
                         'isRoot' => false,
                     ]);
                     $this->addToLandscapeGroups($landscapeGroups, $source, $rel->relationship_type ?? 'relates to', $direction);
@@ -323,7 +323,7 @@ class ComponentController extends Controller
                     $nodes->push([
                         'id' => 'c'.$sub->id,
                         'name' => $sub->name,
-                        'type' => $sub->type->value,
+                        'type' => $sub->type,
                         'isRoot' => false,
                         'isSub' => true,
                     ]);
@@ -353,7 +353,7 @@ class ComponentController extends Controller
         string $label,
         string $direction
     ): void {
-        $type = $component->type->value;
+        $type = $component->type;
 
         if (! isset($groups[$type])) {
             $groups[$type] = collect();

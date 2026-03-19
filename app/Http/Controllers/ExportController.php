@@ -56,7 +56,7 @@ class ExportController extends Controller
                 $row = [
                     $component->id,
                     $component->name,
-                    $component->type->value,
+                    $component->type,
                     $component->description,
                     $component->lifecycle_stage?->value,
                     $component->lifecycle_start_date?->toDateString(),

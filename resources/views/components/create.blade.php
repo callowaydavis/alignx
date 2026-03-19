@@ -26,7 +26,7 @@
                     <option value="">None (root-level component)</option>
                     @foreach ($parentComponents as $parent)
                         <option value="{{ $parent->id }}" @selected(old('parent_id', request('parent')) == $parent->id)>
-                            {{ $parent->name }} ({{ $parent->type->value }})
+                            {{ $parent->name }} ({{ $parent->type }})
                         </option>
                     @endforeach
                 </select>

@@ -299,7 +299,7 @@
                                         <option value="">Select component...</option>
                                         @foreach ($availableComponents as $target)
                                             <option value="{{ $target->id }}">
-                                                {{ $target->name }} ({{ $target->type->value }})
+                                                {{ $target->name }} ({{ $target->type }})
                                             </option>
                                         @endforeach
                                     </select>

@@ -17,7 +17,7 @@ class ComponentResource extends JsonResource
             'parent_id' => $this->parent_id,
             'owner_id' => $this->owner_id,
             'name' => $this->name,
-            'type' => $this->type->value,
+            'type' => $this->type,
             'description' => $this->description,
             'lifecycle_stage' => $this->lifecycle_stage?->value,
             'lifecycle_start_date' => $this->lifecycle_start_date?->toDateString(),

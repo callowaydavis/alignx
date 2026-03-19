@@ -376,7 +376,7 @@ class ComponentTest extends TestCase
 
         $this->put(route('components.update', $component), [
             'name' => $component->name,
-            'type' => $component->type->value,
+            'type' => $component->type,
             'parent_id' => $component->id,
         ])->assertSessionHasErrors(['parent_id']);
     }

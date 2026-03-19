@@ -42,7 +42,7 @@ class AuditTest extends TestCase
 
         $this->put(route('components.update', $component), [
             'name' => 'New Name',
-            'type' => $component->type->value,
+            'type' => $component->type,
         ])->assertRedirect();
 
         $audit = Audit::query()

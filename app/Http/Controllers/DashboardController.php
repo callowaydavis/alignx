@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ComponentType;
 use App\Enums\LifecycleStage;
 use App\Models\Component;
+use App\Models\ComponentType;
 use App\Models\Tag;
 use Illuminate\View\View;
 
@@ -14,8 +14,8 @@ class DashboardController extends Controller
     {
         $totalComponents = Component::query()->count();
 
-        $countsByType = collect(ComponentType::cases())->mapWithKeys(
-            fn ($type) => [$type->value => Component::query()->where('type', $type->value)->count()]
+        $countsByType = ComponentType::query()->orderBy('name')->get()->mapWithKeys(
+            fn ($type) => [$type->name => Component::query()->where('type', $type->name)->count()]
         );
 
         $countsByLifecycle = collect(LifecycleStage::cases())->mapWithKeys(
@@ -34,7 +34,7 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        $types = ComponentType::cases();
+        $types = ComponentType::query()->orderBy('name')->get();
         $lifecycleStages = LifecycleStage::cases();
 
         return view('dashboard.index', compact(

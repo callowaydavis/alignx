@@ -92,7 +92,7 @@ class DiagramTest extends TestCase
 
         $response->assertStatus(200);
         // The landscape view should show the target component's type group
-        $response->assertSee($target->type->value);
+        $response->assertSee($target->type);
         $response->assertSee($target->name);
     }
 

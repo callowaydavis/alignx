@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
-use App\Enums\ComponentType;
 use App\Enums\LifecycleStage;
+use Database\Factories\ComponentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Component extends Model
 {
-    /** @use HasFactory<\Database\Factories\ComponentFactory> */
+    /** @use HasFactory<ComponentFactory> */
     use Auditable, HasFactory;
 
     protected $fillable = [
@@ -32,7 +32,6 @@ class Component extends Model
     public function casts(): array
     {
         return [
-            'type' => ComponentType::class,
             'lifecycle_stage' => LifecycleStage::class,
             'lifecycle_start_date' => 'date',
             'lifecycle_end_date' => 'date',

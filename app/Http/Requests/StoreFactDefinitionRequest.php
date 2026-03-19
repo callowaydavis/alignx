@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\ComponentType;
 use App\Enums\FactFieldType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class StoreFactDefinitionRequest extends FormRequest
@@ -26,7 +26,7 @@ class StoreFactDefinitionRequest extends FormRequest
             'options' => ['nullable', 'array'],
             'options.*' => ['string', 'max:255'],
             'component_types' => ['nullable', 'array'],
-            'component_types.*' => [new Enum(ComponentType::class)],
+            'component_types.*' => [Rule::exists('component_types', 'name')],
         ];
     }
 }

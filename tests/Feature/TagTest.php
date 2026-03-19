@@ -70,7 +70,7 @@ class TagTest extends TestCase
 
         $response = $this->put(route('components.update', $component), [
             'name' => $component->name,
-            'type' => $component->type->value,
+            'type' => $component->type,
             'tags' => ['new-tag'],
         ]);
 
@@ -90,7 +90,7 @@ class TagTest extends TestCase
 
         $response = $this->put(route('components.update', $component), [
             'name' => $component->name,
-            'type' => $component->type->value,
+            'type' => $component->type,
         ]);
 
         $response->assertRedirect();

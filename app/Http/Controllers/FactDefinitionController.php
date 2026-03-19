@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ComponentType;
 use App\Enums\FactFieldType;
 use App\Http\Requests\StoreFactDefinitionRequest;
 use App\Http\Requests\UpdateFactDefinitionRequest;
+use App\Models\ComponentType;
 use App\Models\FactDefinition;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,7 +25,7 @@ class FactDefinitionController extends Controller
     {
         $this->authorize('create', FactDefinition::class);
 
-        $types = ComponentType::cases();
+        $types = ComponentType::query()->orderBy('name')->get();
         $fieldTypes = FactFieldType::cases();
 
         return view('fact-definitions.create', compact('types', 'fieldTypes'));
@@ -45,7 +45,7 @@ class FactDefinitionController extends Controller
     {
         $this->authorize('update', $factDefinition);
 
-        $types = ComponentType::cases();
+        $types = ComponentType::query()->orderBy('name')->get();
         $fieldTypes = FactFieldType::cases();
 
         return view('fact-definitions.edit', compact('factDefinition', 'types', 'fieldTypes'));

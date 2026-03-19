@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\ComponentType;
 use App\Enums\LifecycleStage;
 use App\Models\Component;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class UpdateComponentRequest extends FormRequest
@@ -39,7 +39,7 @@ class UpdateComponentRequest extends FormRequest
                 },
             ],
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', new Enum(ComponentType::class)],
+            'type' => ['required', 'string', Rule::exists('component_types', 'name')],
             'description' => ['nullable', 'string'],
             'lifecycle_stage' => ['nullable', new Enum(LifecycleStage::class)],
             'lifecycle_start_date' => ['nullable', 'date'],

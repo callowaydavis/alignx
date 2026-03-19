@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\ComponentTypeController;
+use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\ComponentController;
@@ -41,4 +44,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class)->except(['show']);
 
     Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::resource('tags', TagController::class)->except(['show', 'create', 'edit']);
+        Route::resource('component-types', ComponentTypeController::class)->except(['show', 'create', 'edit'])
+            ->parameter('component-types', 'componentType');
+    });
 });
