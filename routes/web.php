@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\ComponentController;
+use App\Http\Controllers\ComponentTodoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FactDefinitionController;
@@ -38,6 +39,13 @@ Route::middleware('auth')->group(function () {
         ->name('components.facts.store');
     Route::delete('components/{component}/facts/{fact}', [ComponentController::class, 'destroyFact'])
         ->name('components.facts.destroy');
+
+    Route::post('components/{component}/todos', [ComponentTodoController::class, 'store'])
+        ->name('components.todos.store');
+    Route::patch('components/{component}/todos/{todo}', [ComponentTodoController::class, 'update'])
+        ->name('components.todos.update');
+    Route::delete('components/{component}/todos/{todo}', [ComponentTodoController::class, 'destroy'])
+        ->name('components.todos.destroy');
 
     Route::resource('fact-definitions', FactDefinitionController::class)->except(['show']);
 

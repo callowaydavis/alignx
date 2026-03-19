@@ -87,4 +87,9 @@ class Component extends Model
     {
         return $this->morphMany(Audit::class, 'auditable');
     }
+
+    public function todos(): HasMany
+    {
+        return $this->hasMany(ComponentTodo::class);
+    }
 }

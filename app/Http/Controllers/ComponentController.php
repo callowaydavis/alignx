@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\LifecycleStage;
+use App\Enums\TodoCategory;
+use App\Enums\TodoStatus;
 use App\Http\Requests\StoreComponentRelationshipRequest;
 use App\Http\Requests\StoreComponentRequest;
 use App\Http\Requests\UpdateComponentRequest;
@@ -107,6 +109,8 @@ class ComponentController extends Controller
             'outgoingRelationships.targetComponent',
             'incomingRelationships.sourceComponent',
             'owner',
+            'todos.acceptedByUser',
+            'todos.completedByUser',
         ]);
 
         $availableFacts = FactDefinition::query()
@@ -130,10 +134,18 @@ class ComponentController extends Controller
 
         $audits = $component->audits()->with('user')->latest()->limit(20)->get();
 
+        $todoCategories = TodoCategory::cases();
+        $todoStatuses = TodoStatus::cases();
+        $activeUsers = User::query()->where('is_active', true)->orderBy('name')->get();
+
         ['graphData' => $graphData, 'graphNodes' => $graphNodes, 'graphEdges' => $graphEdges, 'landscapeGroups' => $landscapeGroups]
             = $this->buildDiagramGraph($component);
 
-        return view('components.show', compact('component', 'availableFacts', 'availableComponents', 'allTags', 'audits', 'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups'));
+        return view('components.show', compact(
+            'component', 'availableFacts', 'availableComponents', 'allTags', 'audits',
+            'todoCategories', 'todoStatuses', 'activeUsers',
+            'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups'
+        ));
     }
 
     public function edit(Component $component): View
