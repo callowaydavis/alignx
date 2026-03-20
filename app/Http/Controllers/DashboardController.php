@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\LifecycleStage;
 use App\Models\Component;
 use App\Models\ComponentType;
+use App\Models\FactDefinition;
 use App\Models\Tag;
+use App\Services\ComponentHealthScore;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -37,6 +39,14 @@ class DashboardController extends Controller
         $types = ComponentType::query()->orderBy('name')->get();
         $lifecycleStages = LifecycleStage::cases();
 
+        $requiredFactDefs = FactDefinition::query()->whereNotNull('required_for_types')->get();
+        $rootComponents = Component::query()->rootLevel()->with(['owner', 'facts', 'todos'])->get();
+
+        $healthDistribution = ['healthy' => 0, 'at_risk' => 0, 'critical' => 0];
+        foreach ($rootComponents as $component) {
+            $healthDistribution[ComponentHealthScore::withRequiredFacts($component, $requiredFactDefs)->rating()]++;
+        }
+
         return view('dashboard.index', compact(
             'totalComponents',
             'countsByType',
@@ -45,6 +55,7 @@ class DashboardController extends Controller
             'topTags',
             'types',
             'lifecycleStages',
+            'healthDistribution',
         ));
     }
 }

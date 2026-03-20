@@ -94,6 +94,7 @@
                         <th class="text-left px-6 py-3 font-medium text-gray-500">Name</th>
                         <th class="text-left px-6 py-3 font-medium text-gray-500">Type</th>
                         <th class="text-left px-6 py-3 font-medium text-gray-500">Lifecycle</th>
+                        <th class="text-left px-6 py-3 font-medium text-gray-500">Health</th>
                         <th class="text-left px-6 py-3 font-medium text-gray-500">Tags</th>
                         <th class="text-left px-6 py-3 font-medium text-gray-500">Description</th>
                         <th class="text-right px-6 py-3 font-medium text-gray-500">Actions</th>
@@ -123,6 +124,9 @@
                                 @else
                                     <span class="text-gray-400">—</span>
                                 @endif
+                            </td>
+                            <td class="px-6 py-4">
+                                @include('components._health-score', ['score' => $healthScores[$component->id], 'compact' => true])
                             </td>
                             <td class="px-6 py-4">
                                 @if ($component->tags->isNotEmpty())

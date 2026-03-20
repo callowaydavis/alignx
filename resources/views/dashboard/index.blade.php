@@ -42,6 +42,36 @@
         @endforeach
     </div>
 
+    {{-- Portfolio Health --}}
+    <div class="mb-6 bg-white rounded-xl border border-gray-200 p-5">
+        <h2 class="font-semibold text-gray-800 mb-4">Portfolio Health</h2>
+        @php
+            $totalRated = array_sum($healthDistribution);
+        @endphp
+        @if ($totalRated > 0)
+            <div class="grid grid-cols-3 gap-4">
+                @foreach ([['healthy', 'Healthy', 'bg-green-500', 'bg-green-50 border-green-200', 'text-green-700'], ['at_risk', 'At Risk', 'bg-amber-500', 'bg-amber-50 border-amber-200', 'text-amber-700'], ['critical', 'Critical', 'bg-red-500', 'bg-red-50 border-red-200', 'text-red-700']] as [$key, $label, $barColor, $cardColor, $textColor])
+                    @php
+                        $count = $healthDistribution[$key];
+                        $pct = $totalRated > 0 ? round(($count / $totalRated) * 100) : 0;
+                    @endphp
+                    <div class="rounded-lg border p-4 {{ $cardColor }}">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium {{ $textColor }}">{{ $label }}</span>
+                            <span class="text-2xl font-bold text-gray-900">{{ $count }}</span>
+                        </div>
+                        <div class="w-full bg-white/60 rounded-full h-2">
+                            <div class="h-2 rounded-full {{ $barColor }}" style="width: {{ $pct }}%"></div>
+                        </div>
+                        <p class="text-xs {{ $textColor }} mt-1">{{ $pct }}% of portfolio</p>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <p class="text-sm text-gray-400 text-center py-4">No components to score yet.</p>
+        @endif
+    </div>
+
     <div class="grid grid-cols-3 gap-6">
         {{-- Lifecycle Distribution --}}
         <div class="col-span-1 bg-white rounded-xl border border-gray-200 p-5">

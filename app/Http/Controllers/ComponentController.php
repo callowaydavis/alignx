@@ -14,6 +14,7 @@ use App\Models\ComponentType;
 use App\Models\FactDefinition;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\ComponentHealthScore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -28,7 +29,7 @@ class ComponentController extends Controller
 
         $includeSubcomponents = $request->boolean('include_subcomponents');
         $showMine = $request->boolean('mine');
-        $relations = $includeSubcomponents ? ['tags', 'parent', 'owner'] : ['tags', 'owner'];
+        $relations = $includeSubcomponents ? ['tags', 'parent', 'owner', 'facts', 'todos'] : ['tags', 'owner', 'facts', 'todos'];
         $query = Component::query()->with($relations);
 
         if (! $includeSubcomponents) {
@@ -60,7 +61,12 @@ class ComponentController extends Controller
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
 
-        return view('components.index', compact('components', 'types', 'lifecycleStages', 'allTags', 'includeSubcomponents', 'showMine'));
+        $requiredFactDefs = FactDefinition::query()->whereNotNull('required_for_types')->get();
+        $healthScores = $components->getCollection()->mapWithKeys(
+            fn ($component) => [$component->id => ComponentHealthScore::withRequiredFacts($component, $requiredFactDefs)]
+        );
+
+        return view('components.index', compact('components', 'types', 'lifecycleStages', 'allTags', 'includeSubcomponents', 'showMine', 'healthScores'));
     }
 
     public function create(Request $request): View
@@ -147,10 +153,12 @@ class ComponentController extends Controller
         ['graphData' => $graphData, 'graphNodes' => $graphNodes, 'graphEdges' => $graphEdges, 'landscapeGroups' => $landscapeGroups]
             = $this->buildDiagramGraph($component);
 
+        $healthScore = ComponentHealthScore::for($component);
+
         return view('components.show', compact(
             'component', 'availableFacts', 'availableComponents', 'allTags', 'audits',
             'todoCategories', 'todoStatuses', 'activeUsers',
-            'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups'
+            'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups', 'healthScore'
         ));
     }
 

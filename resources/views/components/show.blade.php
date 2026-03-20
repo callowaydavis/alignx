@@ -87,6 +87,7 @@
         <div class="grid grid-cols-3 gap-6">
             {{-- Left: Component details --}}
             <div class="col-span-1 space-y-5">
+                @include('components._health-score', ['score' => $healthScore, 'compact' => false])
                 <div class="bg-white rounded-xl border border-gray-200 p-5">
                     <div class="flex items-center gap-3 mb-4 flex-wrap">
                         @include('components._type-badge', ['type' => $component->type])
