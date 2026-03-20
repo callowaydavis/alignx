@@ -18,6 +18,7 @@ class FactDefinitionFactory extends Factory
             'field_type' => $this->faker->randomElement(FactFieldType::cases())->value,
             'options' => null,
             'component_types' => null,
+            'required_for_types' => null,
         ];
     }
 }

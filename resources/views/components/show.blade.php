@@ -35,6 +35,28 @@
         </div>
     @endif
 
+    {{-- Missing required facts warning --}}
+    @php
+        $missingRequired = \App\Models\FactDefinition::query()
+            ->whereJsonContains('required_for_types', $component->type)
+            ->whereNotIn('id', $component->facts->pluck('fact_definition_id'))
+            ->get();
+    @endphp
+    @if ($missingRequired->isNotEmpty())
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+            <svg class="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <div class="text-sm">
+                <p class="font-medium text-amber-800">Missing required facts</p>
+                <p class="text-amber-700 mt-0.5">
+                    {{ $missingRequired->pluck('name')->join(', ') }}
+                </p>
+            </div>
+        </div>
+    @endif
+
     {{-- Tab navigation --}}
     <div class="flex border-b border-gray-200 mb-6 -mt-1">
         <button data-switch-tab="overview"

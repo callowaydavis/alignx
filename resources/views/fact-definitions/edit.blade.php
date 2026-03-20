@@ -50,6 +50,22 @@
                 </div>
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Required for Component Types</label>
+                <p class="text-xs text-gray-500 mb-3">When checked, this fact must be provided when creating a component of that type.</p>
+                <div class="grid grid-cols-2 gap-2">
+                    @foreach ($types as $type)
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input type="checkbox" name="required_for_types[]" value="{{ $type->value }}"
+                                   @checked(in_array($type->value, old('required_for_types', $factDefinition->required_for_types ?? [])))
+                                   class="rounded border-gray-300 text-red-500 focus:ring-red-500">
+                            {{ $type->value }}
+                        </label>
+                    @endforeach
+                </div>
+                @error('required_for_types')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+            </div>
+
             <div class="flex items-center gap-3 pt-2">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
                     Save Changes

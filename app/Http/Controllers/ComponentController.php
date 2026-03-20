@@ -72,8 +72,9 @@ class ComponentController extends Controller
         $allTags = Tag::query()->orderBy('name')->get();
         $parentComponents = Component::query()->rootLevel()->orderBy('name')->get();
         $activeUsers = User::query()->where('is_active', true)->orderBy('name')->get();
+        $requiredFactsByType = $this->buildRequiredFactsByType();
 
-        return view('components.create', compact('types', 'lifecycleStages', 'allTags', 'parentComponents', 'activeUsers'));
+        return view('components.create', compact('types', 'lifecycleStages', 'allTags', 'parentComponents', 'activeUsers', 'requiredFactsByType'));
     }
 
     public function store(StoreComponentRequest $request): RedirectResponse
@@ -83,6 +84,7 @@ class ComponentController extends Controller
         $validated = $request->validated();
         $tagNames = $validated['tags'] ?? [];
         unset($validated['tags']);
+        unset($validated['required_facts']);
 
         $component = Component::query()->create($validated);
 
@@ -91,6 +93,10 @@ class ComponentController extends Controller
                 fn ($name) => Tag::query()->firstOrCreate(['name' => $name])->id
             );
             $component->tags()->sync($tagIds);
+        }
+
+        foreach ($request->requiredFactValues() as $factValue) {
+            $component->facts()->create($factValue);
         }
 
         return redirect()->route('components.show', $component)
@@ -376,5 +382,32 @@ class ComponentController extends Controller
             'label' => $label,
             'direction' => $direction,
         ]);
+    }
+
+    /**
+     * Build a map of component type name → array of required FactDefinition data for use in the create form.
+     *
+     * @return array<string, array<int, array{id: int, name: string, field_type: string, options: array<int, string>|null}>>
+     */
+    private function buildRequiredFactsByType(): array
+    {
+        $allRequired = FactDefinition::query()
+            ->whereNotNull('required_for_types')
+            ->get();
+
+        $map = [];
+
+        foreach ($allRequired as $def) {
+            foreach ($def->required_for_types ?? [] as $typeName) {
+                $map[$typeName][] = [
+                    'id' => $def->id,
+                    'name' => $def->name,
+                    'field_type' => $def->field_type->value,
+                    'options' => $def->options,
+                ];
+            }
+        }
+
+        return $map;
     }
 }

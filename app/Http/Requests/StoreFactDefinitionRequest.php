@@ -27,6 +27,8 @@ class StoreFactDefinitionRequest extends FormRequest
             'options.*' => ['string', 'max:255'],
             'component_types' => ['nullable', 'array'],
             'component_types.*' => [Rule::exists('component_types', 'name')],
+            'required_for_types' => ['nullable', 'array'],
+            'required_for_types.*' => [Rule::exists('component_types', 'name')],
         ];
     }
 }
