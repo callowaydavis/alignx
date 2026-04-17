@@ -50,7 +50,7 @@ class Component extends Model
 
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'owner_id');
+        return $this->belongsTo(Team::class, 'owner_id');
     }
 
     public function scopeRootLevel(Builder $query): void

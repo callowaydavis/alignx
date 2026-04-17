@@ -9,7 +9,7 @@ use App\Models\Component;
 use App\Models\ComponentTodo;
 use App\Models\ComponentType;
 use App\Models\FactDefinition;
-use App\Models\User;
+use App\Models\Team;
 use App\Services\ComponentHealthScore;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -40,14 +40,14 @@ class ComponentHealthScoreTest extends TestCase
 
     private function perfectComponent(): Component
     {
-        $owner = User::factory()->create();
+        $team = Team::factory()->create();
         $this->makeType('Application');
 
         return Component::factory()->create([
             'type' => 'Application',
             'description' => 'A well-documented component.',
             'lifecycle_stage' => LifecycleStage::Active->value,
-            'owner_id' => $owner->id,
+            'owner_id' => $team->id,
         ]);
     }
 

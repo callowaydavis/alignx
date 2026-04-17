@@ -50,7 +50,7 @@ class StoreComponentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'owner_id' => ['nullable', 'integer', 'exists:users,id'],
+            'owner_id' => ['nullable', 'integer', 'exists:teams,id'],
             'parent_id' => [
                 'nullable', 'integer', 'exists:components,id',
                 function (string $attribute, mixed $value, Closure $fail) {

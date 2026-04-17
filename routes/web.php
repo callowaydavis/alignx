@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FactDefinitionController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +51,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('fact-definitions', FactDefinitionController::class)->except(['show']);
 
     Route::resource('users', UserController::class)->except(['show']);
+
+    Route::resource('teams', TeamController::class);
+    Route::post('teams/{team}/members', [TeamController::class, 'addMember'])->name('teams.members.add');
+    Route::delete('teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('teams.members.remove');
 
     Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');
 

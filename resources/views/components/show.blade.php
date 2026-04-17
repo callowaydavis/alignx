@@ -130,8 +130,12 @@
                     @endif
 
                     <div class="mt-4 pt-4 border-t border-gray-100 space-y-1">
-                        <p class="text-xs font-medium text-gray-500">Owner</p>
-                        <p class="text-sm text-gray-700">{{ $component->owner?->name ?? 'Unassigned' }}</p>
+                        <p class="text-xs font-medium text-gray-500">Owning Team</p>
+                        @if ($component->owner)
+                            <a href="{{ route('teams.show', $component->owner) }}" class="text-sm text-blue-600 hover:text-blue-800">{{ $component->owner->name }}</a>
+                        @else
+                            <p class="text-sm text-gray-700">Unassigned</p>
+                        @endif
                     </div>
 
                     <div class="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400 space-y-1">
@@ -187,71 +191,71 @@
                         <h2 class="font-semibold text-gray-800">Facts</h2>
                     </div>
 
-                    @if ($component->facts->isNotEmpty())
-                        <div class="divide-y divide-gray-50">
-                            @foreach ($component->facts as $fact)
-                                <div class="flex items-center justify-between px-5 py-3">
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-0.5">{{ $fact->factDefinition->name }}</p>
-                                        <p class="text-sm text-gray-800">
-                                            @if ($fact->factDefinition->field_type->value === 'boolean')
-                                                {{ $fact->value === '1' || strtolower($fact->value) === 'true' ? 'Yes' : 'No' }}
-                                            @elseif ($fact->factDefinition->field_type->value === 'url')
-                                                <a href="{{ $fact->value }}" target="_blank"
-                                                   class="text-blue-600 hover:underline">{{ $fact->value }}</a>
-                                            @else
-                                                {{ $fact->value ?? '—' }}
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <form method="POST"
-                                          action="{{ route('components.facts.destroy', [$component, $fact->id]) }}"
-                                          onsubmit="return confirm('Remove this fact?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                      d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </button>
-                                    </form>
+                    <div class="divide-y divide-gray-50" id="facts-list">
+                        @foreach ($component->facts as $fact)
+                            <div class="flex items-center justify-between px-5 py-3"
+                                 data-fact-id="{{ $fact->id }}"
+                                 data-fact-def-id="{{ $fact->factDefinition->id }}"
+                                 data-fact-def-name="{{ $fact->factDefinition->name }}"
+                                 data-fact-def-type="{{ $fact->factDefinition->field_type->value }}"
+                                 data-fact-def-options="{{ json_encode($fact->factDefinition->options) }}">
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-0.5">{{ $fact->factDefinition->name }}</p>
+                                    <p class="text-sm text-gray-800">
+                                        @if ($fact->factDefinition->field_type->value === 'boolean')
+                                            {{ $fact->value === '1' || strtolower($fact->value) === 'true' ? 'Yes' : 'No' }}
+                                        @elseif ($fact->factDefinition->field_type->value === 'url')
+                                            <a href="{{ $fact->value }}" target="_blank"
+                                               class="text-blue-600 hover:underline">{{ $fact->value }}</a>
+                                        @else
+                                            {{ $fact->value ?? '—' }}
+                                        @endif
+                                    </p>
                                 </div>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    @if ($availableFacts->isNotEmpty())
-                        <div class="px-5 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-                            <form method="POST" action="{{ route('components.facts.store', $component) }}"
-                                  class="flex gap-3 flex-wrap items-end">
-                                @csrf
-                                <div class="flex-1 min-w-48">
-                                    <label class="block text-xs text-gray-500 mb-1">Add Fact</label>
-                                    <select name="fact_definition_id" id="fact-select"
-                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            onchange="updateFactInput(this)">
-                                        <option value="">Select a fact...</option>
-                                        @foreach ($availableFacts as $factDef)
-                                            <option value="{{ $factDef->id }}"
-                                                    data-type="{{ $factDef->field_type->value }}"
-                                                    data-options="{{ json_encode($factDef->options) }}">
-                                                {{ $factDef->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="flex-1 min-w-48" id="fact-value-container">
-                                    <label class="block text-xs text-gray-500 mb-1">Value</label>
-                                    <input type="text" name="value" id="fact-value"
-                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <button type="submit"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                                    Add
+                                <button type="button"
+                                        class="fact-delete-btn text-gray-300 hover:text-red-500 transition-colors"
+                                        data-url="{{ route('components.facts.destroy', [$component, $fact->id]) }}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
                                 </button>
-                            </form>
-                        </div>
-                    @elseif ($component->facts->isEmpty())
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div id="facts-add-section"
+                         class="{{ $availableFacts->isEmpty() ? 'hidden ' : '' }}px-5 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
+                        <form id="facts-add-form" class="flex gap-3 flex-wrap items-end">
+                            @csrf
+                            <div class="flex-1 min-w-48">
+                                <label class="block text-xs text-gray-500 mb-1">Add Fact</label>
+                                <select name="fact_definition_id" id="fact-select"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        onchange="updateFactInput(this)">
+                                    <option value="">Select a fact...</option>
+                                    @foreach ($availableFacts as $factDef)
+                                        <option value="{{ $factDef->id }}"
+                                                data-type="{{ $factDef->field_type->value }}"
+                                                data-options="{{ json_encode($factDef->options) }}">
+                                            {{ $factDef->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="flex-1 min-w-48" id="fact-value-container">
+                                <label class="block text-xs text-gray-500 mb-1">Value</label>
+                                <input type="text" name="value" id="fact-value"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button type="submit"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                                Add
+                            </button>
+                        </form>
+                    </div>
+
+                    @if ($availableFacts->isEmpty() && $component->facts->isEmpty())
                         <div class="px-5 py-6 text-center">
                             <p class="text-sm text-gray-400">No fact definitions available for this component type.</p>
                             <a href="{{ route('fact-definitions.create') }}"
@@ -425,6 +429,143 @@
     </div>
 
     <script>
+        // ── Facts: add / delete without page reload ──────────────────────────
+        (function () {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+            const storeUrl  = '{{ route('components.facts.store', $component) }}';
+            const factsList  = document.getElementById('facts-list');
+            const addSection = document.getElementById('facts-add-section');
+            const addForm    = document.getElementById('facts-add-form');
+            const factSelect = document.getElementById('fact-select');
+
+            if (!factsList) { return; }
+
+            function renderValueHtml(value, fieldType) {
+                if (fieldType === 'boolean') {
+                    return (value === '1' || String(value).toLowerCase() === 'true') ? 'Yes' : 'No';
+                }
+                if (fieldType === 'url' && value) {
+                    const safe = String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                    return `<a href="${safe}" target="_blank" class="text-blue-600 hover:underline">${safe}</a>`;
+                }
+                return value || '—';
+            }
+
+            function buildFactRow(factId, defId, defName, defType, defOptions, value, deleteUrl) {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between px-5 py-3';
+                row.dataset.factId      = factId;
+                row.dataset.factDefId   = defId;
+                row.dataset.factDefName = defName;
+                row.dataset.factDefType = defType;
+                row.dataset.factDefOptions = JSON.stringify(defOptions);
+                row.innerHTML = `
+                    <div>
+                        <p class="text-xs text-gray-400 mb-0.5">${defName}</p>
+                        <p class="text-sm text-gray-800">${renderValueHtml(value, defType)}</p>
+                    </div>
+                    <button type="button" class="fact-delete-btn text-gray-300 hover:text-red-500 transition-colors"
+                            data-url="${deleteUrl}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>`;
+                return row;
+            }
+
+            function syncAddSectionVisibility() {
+                if (!addSection || !factSelect) { return; }
+                const hasOptions = Array.from(factSelect.options).some(o => o.value !== '');
+                addSection.classList.toggle('hidden', !hasOptions);
+            }
+
+            function addOptionToSelect(defId, defName, defType, defOptions) {
+                if (!factSelect) { return; }
+                const opt = document.createElement('option');
+                opt.value = defId;
+                opt.textContent = defName;
+                opt.dataset.type    = defType;
+                opt.dataset.options = JSON.stringify(defOptions);
+                const insertBefore = Array.from(factSelect.options)
+                    .filter(o => o.value !== '')
+                    .find(o => o.textContent.localeCompare(defName) > 0);
+                factSelect.insertBefore(opt, insertBefore ?? null);
+                syncAddSectionVisibility();
+            }
+
+            function removeOptionFromSelect(defId) {
+                if (!factSelect) { return; }
+                factSelect.querySelector(`option[value="${defId}"]`)?.remove();
+                syncAddSectionVisibility();
+            }
+
+            // Add fact
+            if (addForm) {
+                addForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    const defId = factSelect?.value;
+                    if (!defId) { return; }
+
+                    const valueField = addForm.querySelector('[name="value"]');
+                    const value = valueField?.value ?? '';
+                    const submitBtn = addForm.querySelector('[type="submit"]');
+                    submitBtn.disabled = true;
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('fact_definition_id', defId);
+                        formData.append('value', value);
+
+                        const res = await fetch(storeUrl, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            body: formData,
+                        });
+
+                        if (!res.ok) { throw new Error('Request failed'); }
+
+                        const { fact } = await res.json();
+                        const def = fact.fact_definition;
+                        const deleteUrl = storeUrl + '/' + fact.id;
+
+                        factsList.appendChild(buildFactRow(fact.id, def.id, def.name, def.field_type, def.options, fact.value, deleteUrl));
+                        removeOptionFromSelect(def.id);
+                        factSelect.value = '';
+                        updateFactInput(factSelect);
+                    } catch {
+                        alert('Failed to save fact. Please try again.');
+                    } finally {
+                        submitBtn.disabled = false;
+                    }
+                });
+            }
+
+            // Delete fact (event delegation)
+            factsList.addEventListener('click', async function (e) {
+                const btn = e.target.closest('.fact-delete-btn');
+                if (!btn || !confirm('Remove this fact?')) { return; }
+
+                const row = btn.closest('[data-fact-id]');
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch(btn.dataset.url, {
+                        method: 'DELETE',
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                    });
+
+                    if (!res.ok) { throw new Error('Request failed'); }
+
+                    addOptionToSelect(row.dataset.factDefId, row.dataset.factDefName, row.dataset.factDefType, JSON.parse(row.dataset.factDefOptions || 'null'));
+                    row.remove();
+                } catch {
+                    alert('Failed to remove fact. Please try again.');
+                    btn.disabled = false;
+                }
+            });
+        })();
+
         function updateFactInput(select) {
             const container = document.getElementById('fact-value-container');
             const option = select.options[select.selectedIndex];

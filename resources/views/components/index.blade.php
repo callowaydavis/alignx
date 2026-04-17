@@ -64,7 +64,7 @@
             <input type="checkbox" name="mine" value="1"
                    @checked(request('mine'))
                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-            Show mine
+            My teams' components
         </label>
 
         <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors">

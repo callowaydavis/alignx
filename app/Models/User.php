@@ -5,7 +5,7 @@ namespace App\Models;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -47,9 +47,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function ownedComponents(): HasMany
+    public function teams(): BelongsToMany
     {
-        return $this->hasMany(Component::class, 'owner_id');
+        return $this->belongsToMany(Team::class)->withTimestamps();
     }
 
     public function isAdmin(): bool

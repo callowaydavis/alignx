@@ -13,8 +13,10 @@ use App\Models\ComponentRelationship;
 use App\Models\ComponentType;
 use App\Models\FactDefinition;
 use App\Models\Tag;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\ComponentHealthScore;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -37,7 +39,8 @@ class ComponentController extends Controller
         }
 
         if ($showMine) {
-            $query->where('owner_id', Auth::id());
+            $myTeamIds = Auth::user()->teams()->pluck('teams.id');
+            $query->whereIn('owner_id', $myTeamIds);
         }
 
         if ($request->filled('type')) {
@@ -77,10 +80,10 @@ class ComponentController extends Controller
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
         $parentComponents = Component::query()->rootLevel()->orderBy('name')->get();
-        $activeUsers = User::query()->where('is_active', true)->orderBy('name')->get();
+        $teams = Team::query()->orderBy('name')->get();
         $requiredFactsByType = $this->buildRequiredFactsByType();
 
-        return view('components.create', compact('types', 'lifecycleStages', 'allTags', 'parentComponents', 'activeUsers', 'requiredFactsByType'));
+        return view('components.create', compact('types', 'lifecycleStages', 'allTags', 'parentComponents', 'teams', 'requiredFactsByType'));
     }
 
     public function store(StoreComponentRequest $request): RedirectResponse
@@ -171,9 +174,9 @@ class ComponentController extends Controller
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
         $parentComponents = Component::query()->rootLevel()->where('id', '!=', $component->id)->orderBy('name')->get();
-        $activeUsers = User::query()->where('is_active', true)->orderBy('name')->get();
+        $teams = Team::query()->orderBy('name')->get();
 
-        return view('components.edit', compact('component', 'types', 'lifecycleStages', 'allTags', 'parentComponents', 'activeUsers'));
+        return view('components.edit', compact('component', 'types', 'lifecycleStages', 'allTags', 'parentComponents', 'teams'));
     }
 
     public function update(UpdateComponentRequest $request, Component $component): RedirectResponse
@@ -229,7 +232,7 @@ class ComponentController extends Controller
             ->with('success', 'Relationship removed successfully.');
     }
 
-    public function storeFact(Request $request, Component $component): RedirectResponse
+    public function storeFact(Request $request, Component $component): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $component);
 
@@ -238,20 +241,41 @@ class ComponentController extends Controller
             'value' => ['nullable', 'string'],
         ]);
 
-        $component->facts()->updateOrCreate(
+        $fact = $component->facts()->updateOrCreate(
             ['fact_definition_id' => $request->integer('fact_definition_id')],
             ['value' => $request->input('value')]
         );
+
+        if ($request->wantsJson()) {
+            $fact->load('factDefinition');
+
+            return response()->json([
+                'fact' => [
+                    'id' => $fact->id,
+                    'value' => $fact->value,
+                    'fact_definition' => [
+                        'id' => $fact->factDefinition->id,
+                        'name' => $fact->factDefinition->name,
+                        'field_type' => $fact->factDefinition->field_type->value,
+                        'options' => $fact->factDefinition->options,
+                    ],
+                ],
+            ]);
+        }
 
         return redirect()->route('components.show', $component)
             ->with('success', 'Fact saved successfully.');
     }
 
-    public function destroyFact(Component $component, int $factId): RedirectResponse
+    public function destroyFact(Component $component, int $factId): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $component);
 
         $component->facts()->where('id', $factId)->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()->route('components.show', $component)
             ->with('success', 'Fact removed successfully.');

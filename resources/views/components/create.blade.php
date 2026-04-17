@@ -9,12 +9,12 @@
             @csrf
 
             <div>
-                <label for="owner_id" class="block text-sm font-medium text-gray-700 mb-1">Owner</label>
+                <label for="owner_id" class="block text-sm font-medium text-gray-700 mb-1">Owning Team</label>
                 <select id="owner_id" name="owner_id"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Unassigned</option>
-                    @foreach ($activeUsers as $user)
-                        <option value="{{ $user->id }}" @selected(old('owner_id', Auth::id()) == $user->id)>{{ $user->name }}</option>
+                    @foreach ($teams as $team)
+                        <option value="{{ $team->id }}" @selected(old('owner_id') == $team->id)>{{ $team->name }}</option>
                     @endforeach
                 </select>
             </div>

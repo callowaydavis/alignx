@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ComponentType;
 use App\Models\Component;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,26 +18,29 @@ class OwnershipTest extends TestCase
         $user = User::factory()->admin()->create();
         $this->actingAs($user);
 
-        $owner = User::factory()->create();
+        $team = Team::factory()->create();
 
         $this->post(route('components.store'), [
             'name' => 'Owned Component',
             'type' => ComponentType::Application->value,
-            'owner_id' => $owner->id,
+            'owner_id' => $team->id,
         ])->assertRedirect();
 
         $this->assertDatabaseHas('components', [
             'name' => 'Owned Component',
-            'owner_id' => $owner->id,
+            'owner_id' => $team->id,
         ]);
     }
 
-    public function test_index_with_mine_filter_returns_only_authenticated_users_components(): void
+    public function test_index_with_mine_filter_returns_only_components_owned_by_users_teams(): void
     {
         $user = User::factory()->admin()->create();
         $this->actingAs($user);
 
-        Component::factory()->create(['name' => 'My Component', 'owner_id' => $user->id]);
+        $myTeam = Team::factory()->create();
+        $user->teams()->attach($myTeam);
+
+        Component::factory()->create(['name' => 'My Component', 'owner_id' => $myTeam->id]);
         Component::factory()->create(['name' => 'Other Component', 'owner_id' => null]);
 
         $this->get(route('components.index', ['mine' => '1']))
@@ -45,14 +49,17 @@ class OwnershipTest extends TestCase
             ->assertDontSee('Other Component');
     }
 
-    public function test_index_with_mine_filter_excludes_other_users_components(): void
+    public function test_index_with_mine_filter_excludes_other_teams_components(): void
     {
         $user = User::factory()->admin()->create();
-        $other = User::factory()->create();
         $this->actingAs($user);
 
-        Component::factory()->create(['name' => 'My Component', 'owner_id' => $user->id]);
-        Component::factory()->create(['name' => 'Their Component', 'owner_id' => $other->id]);
+        $myTeam = Team::factory()->create();
+        $otherTeam = Team::factory()->create();
+        $user->teams()->attach($myTeam);
+
+        Component::factory()->create(['name' => 'My Component', 'owner_id' => $myTeam->id]);
+        Component::factory()->create(['name' => 'Their Component', 'owner_id' => $otherTeam->id]);
 
         $this->get(route('components.index', ['mine' => '1']))
             ->assertOk()
@@ -60,17 +67,17 @@ class OwnershipTest extends TestCase
             ->assertDontSee('Their Component');
     }
 
-    public function test_show_page_displays_owner_name(): void
+    public function test_show_page_displays_owning_team_name(): void
     {
         $user = User::factory()->admin()->create();
         $this->actingAs($user);
 
-        $owner = User::factory()->create(['name' => 'Jane Smith']);
-        $component = Component::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['name' => 'Platform Team']);
+        $component = Component::factory()->create(['owner_id' => $team->id]);
 
         $this->get(route('components.show', $component))
             ->assertOk()
-            ->assertSee('Jane Smith');
+            ->assertSee('Platform Team');
     }
 
     public function test_show_page_displays_unassigned_when_no_owner(): void
