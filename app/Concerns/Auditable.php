@@ -38,7 +38,7 @@ trait Auditable
         });
     }
 
-    protected function recordAudit(string $event, array $oldValues, array $newValues): void
+    public function recordAudit(string $event, array $oldValues, array $newValues): void
     {
         Audit::create([
             'auditable_type' => static::class,

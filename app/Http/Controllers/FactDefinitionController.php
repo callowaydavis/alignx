@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\FactFieldType;
 use App\Http\Requests\StoreFactDefinitionRequest;
 use App\Http\Requests\UpdateFactDefinitionRequest;
-use App\Models\ComponentType;
 use App\Models\FactDefinition;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,10 +24,9 @@ class FactDefinitionController extends Controller
     {
         $this->authorize('create', FactDefinition::class);
 
-        $types = ComponentType::query()->orderBy('name')->get();
         $fieldTypes = FactFieldType::cases();
 
-        return view('fact-definitions.create', compact('types', 'fieldTypes'));
+        return view('fact-definitions.create', compact('fieldTypes'));
     }
 
     public function store(StoreFactDefinitionRequest $request): RedirectResponse
@@ -45,10 +43,9 @@ class FactDefinitionController extends Controller
     {
         $this->authorize('update', $factDefinition);
 
-        $types = ComponentType::query()->orderBy('name')->get();
         $fieldTypes = FactFieldType::cases();
 
-        return view('fact-definitions.edit', compact('factDefinition', 'types', 'fieldTypes'));
+        return view('fact-definitions.edit', compact('factDefinition', 'fieldTypes'));
     }
 
     public function update(UpdateFactDefinitionRequest $request, FactDefinition $factDefinition): RedirectResponse

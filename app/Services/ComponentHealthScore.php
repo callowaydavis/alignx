@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\TodoStatus;
 use App\Models\Component;
-use App\Models\FactDefinition;
 use Illuminate\Support\Collection;
 
 class ComponentHealthScore
@@ -22,15 +21,15 @@ class ComponentHealthScore
     }
 
     /**
-     * Create a score for a single component, loading required facts and relations automatically.
+     * Create a score for a single component, resolving required facts from fact sheets.
      */
     public static function for(Component $component): self
     {
         $component->loadMissing(['owner', 'facts', 'todos']);
 
-        $requiredFactDefs = FactDefinition::query()
-            ->whereNotNull('required_for_types')
-            ->get();
+        $requiredFactDefs = FactSheetResolver::forComponentType($component->type)
+            ->flatMap(fn ($sheet) => $sheet->factDefinitions->filter(fn ($def) => $def->pivot->is_required))
+            ->unique('id');
 
         return new self($component, $requiredFactDefs);
     }
@@ -96,10 +95,7 @@ class ComponentHealthScore
 
         // Missing required facts: −10 each, max −20
         $existingFactDefIds = $this->component->facts->pluck('fact_definition_id');
-        $relevantDefs = $this->requiredFactDefs->filter(
-            fn ($def) => $def->isRequiredForType($this->component->type)
-        );
-        $missingCount = $relevantDefs->filter(
+        $missingCount = $this->requiredFactDefs->filter(
             fn ($def) => ! $existingFactDefIds->contains($def->id)
         )->count();
 

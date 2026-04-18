@@ -3,10 +3,12 @@
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ComponentTypeController;
+use App\Http\Controllers\Admin\FactSheetController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\ComponentController;
+use App\Http\Controllers\ComponentFactSheetController;
 use App\Http\Controllers\ComponentTodoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
@@ -40,6 +42,8 @@ Route::middleware('auth')->group(function () {
         ->name('components.facts.store');
     Route::delete('components/{component}/facts/{fact}', [ComponentController::class, 'destroyFact'])
         ->name('components.facts.destroy');
+    Route::post('components/{component}/fact-sheets/{factSheet}', [ComponentFactSheetController::class, 'submit'])
+        ->name('components.fact-sheets.submit');
 
     Route::post('components/{component}/todos', [ComponentTodoController::class, 'store'])
         ->name('components.todos.store');
@@ -63,5 +67,17 @@ Route::middleware('auth')->group(function () {
         Route::resource('tags', TagController::class)->except(['show', 'create', 'edit']);
         Route::resource('component-types', ComponentTypeController::class)->except(['show', 'create', 'edit'])
             ->parameter('component-types', 'componentType');
+        Route::resource('fact-sheets', FactSheetController::class)
+            ->parameter('fact-sheets', 'factSheet');
+        Route::post('fact-sheets/{factSheet}/definitions', [FactSheetController::class, 'addDefinition'])
+            ->name('fact-sheets.definitions.add');
+        Route::delete('fact-sheets/{factSheet}/definitions/{factDefinition}', [FactSheetController::class, 'removeDefinition'])
+            ->name('fact-sheets.definitions.remove');
+        Route::patch('fact-sheets/{factSheet}/definitions/{factDefinition}', [FactSheetController::class, 'updateDefinition'])
+            ->name('fact-sheets.definitions.update');
+        Route::post('fact-sheets/{factSheet}/conditions', [FactSheetController::class, 'addCondition'])
+            ->name('fact-sheets.conditions.add');
+        Route::delete('fact-sheets/{factSheet}/conditions/{condition}', [FactSheetController::class, 'removeCondition'])
+            ->name('fact-sheets.conditions.remove');
     });
 });

@@ -43,8 +43,7 @@
             <div>
                 <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Type <span class="text-red-500">*</span></label>
                 <select id="type" name="type" required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 @error('type') border-red-300 @enderror"
-                        onchange="updateRequiredFacts(this.value)">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 @error('type') border-red-300 @enderror">
                     <option value="">Select a type</option>
                     @foreach ($types as $type)
                         <option value="{{ $type->value }}" @selected(old('type') === $type->value)>{{ $type->value }}</option>
@@ -52,22 +51,6 @@
                 </select>
                 @error('type')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
             </div>
-
-            <div id="required-facts-container" class="hidden">
-                <div class="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
-                    <p class="text-sm font-medium text-amber-800">Required Facts</p>
-                    <p class="text-xs text-amber-700">The following facts are required for this component type.</p>
-                    <div id="required-facts-fields" class="space-y-3"></div>
-                </div>
-            </div>
-            {{-- Hidden error carriers for required fact server-side errors --}}
-            @foreach ($requiredFactsByType as $typeName => $facts)
-                @foreach ($facts as $fact)
-                    @error("required_facts.{$fact['id']}")
-                        <span class="hidden" data-error-key="required_facts.{{ $fact['id'] }}">{{ $message }}</span>
-                    @enderror
-                @endforeach
-            @endforeach
 
             <div>
                 <label for="lifecycle_stage" class="block text-sm font-medium text-gray-700 mb-1">Lifecycle Stage</label>
@@ -140,70 +123,6 @@
     </div>
 
     <script>
-        const requiredFactsByType = @json($requiredFactsByType);
-        const oldRequiredFacts = @json(old('required_facts', []));
-
-        function updateRequiredFacts(type) {
-            const container = document.getElementById('required-facts-container');
-            const fields = document.getElementById('required-facts-fields');
-            const facts = requiredFactsByType[type] || [];
-
-            if (facts.length === 0) {
-                container.classList.add('hidden');
-                fields.innerHTML = '';
-                return;
-            }
-
-            container.classList.remove('hidden');
-            fields.innerHTML = '';
-
-            facts.forEach(function (fact) {
-                const old = (oldRequiredFacts && oldRequiredFacts[fact.id]) || '';
-                const wrapper = document.createElement('div');
-                let inputHtml = '';
-
-                if (fact.field_type === 'boolean') {
-                    inputHtml = `<select name="required_facts[${fact.id}]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select...</option>
-                        <option value="true" ${old === 'true' ? 'selected' : ''}>Yes</option>
-                        <option value="false" ${old === 'false' ? 'selected' : ''}>No</option>
-                    </select>`;
-                } else if (fact.field_type === 'select' && fact.options) {
-                    const opts = fact.options.map(o => `<option value="${o}" ${old === o ? 'selected' : ''}>${o}</option>`).join('');
-                    inputHtml = `<select name="required_facts[${fact.id}]" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select...</option>${opts}
-                    </select>`;
-                } else if (fact.field_type === 'date') {
-                    inputHtml = `<input type="date" name="required_facts[${fact.id}]" value="${old}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">`;
-                } else if (fact.field_type === 'number') {
-                    inputHtml = `<input type="number" name="required_facts[${fact.id}]" value="${old}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">`;
-                } else {
-                    inputHtml = `<input type="text" name="required_facts[${fact.id}]" value="${old}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">`;
-                }
-
-                wrapper.innerHTML = `<div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">${fact.name} <span class="text-red-500">*</span></label>
-                    ${inputHtml}
-                    <p class="mt-1 text-xs text-red-600 hidden" id="error-required_facts-${fact.id}"></p>
-                </div>`;
-                fields.appendChild(wrapper);
-
-                // Show server-side errors on re-render
-                const errorEl = document.querySelector(`[data-error-key="required_facts.${fact.id}"]`);
-                if (errorEl) {
-                    document.getElementById(`error-required_facts-${fact.id}`).textContent = errorEl.textContent;
-                    document.getElementById(`error-required_facts-${fact.id}`).classList.remove('hidden');
-                }
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const typeSelect = document.getElementById('type');
-            if (typeSelect.value) {
-                updateRequiredFacts(typeSelect.value);
-            }
-        });
-
         function addTag() {
             const input = document.getElementById('tag-input');
             const name = input.value.trim();

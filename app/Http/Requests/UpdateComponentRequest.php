@@ -38,6 +38,7 @@ class UpdateComponentRequest extends FormRequest
                     }
                 },
             ],
+            'is_active' => ['boolean'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', Rule::exists('component_types', 'name')],
             'description' => ['nullable', 'string'],

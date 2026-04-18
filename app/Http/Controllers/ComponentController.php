@@ -11,14 +11,15 @@ use App\Http\Requests\UpdateComponentRequest;
 use App\Models\Component;
 use App\Models\ComponentRelationship;
 use App\Models\ComponentType;
-use App\Models\FactDefinition;
 use App\Models\Tag;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ComponentHealthScore;
+use App\Services\FactSheetResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -31,8 +32,12 @@ class ComponentController extends Controller
 
         $includeSubcomponents = $request->boolean('include_subcomponents');
         $showMine = $request->boolean('mine');
+        $showInactive = $request->boolean('inactive');
         $relations = $includeSubcomponents ? ['tags', 'parent', 'owner', 'facts', 'todos'] : ['tags', 'owner', 'facts', 'todos'];
-        $query = Component::query()->with($relations);
+
+        $query = $showInactive
+            ? Component::withoutGlobalScope('active')->with($relations)->where('is_active', false)
+            : Component::query()->with($relations);
 
         if (! $includeSubcomponents) {
             $query->rootLevel();
@@ -59,17 +64,45 @@ class ComponentController extends Controller
             $query->whereHas('tags', fn ($q) => $q->where('name', $request->string('tag')));
         }
 
-        $components = $query->orderBy('name')->paginate(20)->withQueryString();
         $types = ComponentType::query()->orderBy('name')->get();
         $lifecycleStages = LifecycleStage::cases();
         $allTags = Tag::query()->orderBy('name')->get();
 
-        $requiredFactDefs = FactDefinition::query()->whereNotNull('required_for_types')->get();
-        $healthScores = $components->getCollection()->mapWithKeys(
-            fn ($component) => [$component->id => ComponentHealthScore::withRequiredFacts($component, $requiredFactDefs)]
-        );
+        if ($request->filled('health')) {
+            $healthRating = $request->string('health')->value();
+            $allComponents = $query->orderBy('name')->get();
 
-        return view('components.index', compact('components', 'types', 'lifecycleStages', 'allTags', 'includeSubcomponents', 'showMine', 'healthScores'));
+            $allScores = $allComponents->mapWithKeys(
+                fn ($component) => [$component->id => ComponentHealthScore::for($component)]
+            );
+
+            $filtered = $allComponents->filter(
+                fn ($component) => $allScores[$component->id]->rating() === $healthRating
+            )->values();
+
+            $page = $request->integer('page', 1);
+            $sliced = $filtered->slice(($page - 1) * 20, 20)->values();
+
+            $components = new LengthAwarePaginator(
+                $sliced,
+                $filtered->count(),
+                20,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+
+            $healthScores = $sliced->mapWithKeys(
+                fn ($component) => [$component->id => $allScores[$component->id]]
+            );
+        } else {
+            $components = $query->orderBy('name')->paginate(20)->withQueryString();
+
+            $healthScores = $components->getCollection()->mapWithKeys(
+                fn ($component) => [$component->id => ComponentHealthScore::for($component)]
+            );
+        }
+
+        return view('components.index', compact('components', 'types', 'lifecycleStages', 'allTags', 'includeSubcomponents', 'showMine', 'showInactive', 'healthScores'));
     }
 
     public function create(Request $request): View
@@ -81,9 +114,8 @@ class ComponentController extends Controller
         $allTags = Tag::query()->orderBy('name')->get();
         $parentComponents = Component::query()->rootLevel()->orderBy('name')->get();
         $teams = Team::query()->orderBy('name')->get();
-        $requiredFactsByType = $this->buildRequiredFactsByType();
 
-        return view('components.create', compact('types', 'lifecycleStages', 'allTags', 'parentComponents', 'teams', 'requiredFactsByType'));
+        return view('components.create', compact('types', 'lifecycleStages', 'allTags', 'parentComponents', 'teams'));
     }
 
     public function store(StoreComponentRequest $request): RedirectResponse
@@ -93,7 +125,6 @@ class ComponentController extends Controller
         $validated = $request->validated();
         $tagNames = $validated['tags'] ?? [];
         unset($validated['tags']);
-        unset($validated['required_facts']);
 
         $component = Component::query()->create($validated);
 
@@ -102,10 +133,6 @@ class ComponentController extends Controller
                 fn ($name) => Tag::query()->firstOrCreate(['name' => $name])->id
             );
             $component->tags()->sync($tagIds);
-        }
-
-        foreach ($request->requiredFactValues() as $factValue) {
-            $component->facts()->create($factValue);
         }
 
         return redirect()->route('components.show', $component)
@@ -128,14 +155,7 @@ class ComponentController extends Controller
             'todos.completedByUser',
         ]);
 
-        $availableFacts = FactDefinition::query()
-            ->where(function ($q) use ($component) {
-                $q->whereNull('component_types')
-                    ->orWhereJsonContains('component_types', $component->type);
-            })
-            ->whereNotIn('id', $component->facts->pluck('fact_definition_id'))
-            ->orderBy('name')
-            ->get();
+        $applicableSheets = FactSheetResolver::forComponent($component, Auth::user());
 
         $subcomponentIds = $component->subcomponents->pluck('id');
 
@@ -159,7 +179,7 @@ class ComponentController extends Controller
         $healthScore = ComponentHealthScore::for($component);
 
         return view('components.show', compact(
-            'component', 'availableFacts', 'availableComponents', 'allTags', 'audits',
+            'component', 'applicableSheets', 'availableComponents', 'allTags', 'audits',
             'todoCategories', 'todoStatuses', 'activeUsers',
             'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups', 'healthScore'
         ));
@@ -212,10 +232,16 @@ class ComponentController extends Controller
     {
         $this->authorize('update', $component);
 
-        $component->outgoingRelationships()->create([
+        $rel = $component->outgoingRelationships()->create([
             'target_component_id' => $request->integer('target_component_id'),
             'relationship_type' => $request->string('relationship_type')->value() ?: null,
             'description' => $request->string('description')->value() ?: null,
+        ]);
+
+        $rel->load('targetComponent');
+        $component->recordAudit('relationship_added', [], [
+            'target' => $rel->targetComponent?->name,
+            'type' => $rel->relationship_type ?? 'relates to',
         ]);
 
         return redirect()->route('components.show', $component)
@@ -225,6 +251,12 @@ class ComponentController extends Controller
     public function destroyRelationship(Component $component, ComponentRelationship $relationship): RedirectResponse
     {
         $this->authorize('update', $component);
+
+        $relationship->loadMissing('targetComponent');
+        $component->recordAudit('relationship_removed', [
+            'target' => $relationship->targetComponent?->name,
+            'type' => $relationship->relationship_type ?? 'relates to',
+        ], []);
 
         $relationship->delete();
 
@@ -241,14 +273,25 @@ class ComponentController extends Controller
             'value' => ['nullable', 'string'],
         ]);
 
+        $defId = $request->integer('fact_definition_id');
+        $oldValue = $component->facts()->where('fact_definition_id', $defId)->value('value');
+
         $fact = $component->facts()->updateOrCreate(
-            ['fact_definition_id' => $request->integer('fact_definition_id')],
+            ['fact_definition_id' => $defId],
             ['value' => $request->input('value')]
         );
 
-        if ($request->wantsJson()) {
-            $fact->load('factDefinition');
+        $fact->load('factDefinition');
+        $defName = $fact->factDefinition->name;
+        $newValue = $fact->value;
 
+        if ($fact->wasRecentlyCreated) {
+            $component->recordAudit('fact_added', [], [$defName => $newValue]);
+        } elseif ($oldValue !== $newValue) {
+            $component->recordAudit('fact_updated', [$defName => $oldValue], [$defName => $newValue]);
+        }
+
+        if ($request->wantsJson()) {
             return response()->json([
                 'fact' => [
                     'id' => $fact->id,
@@ -271,7 +314,11 @@ class ComponentController extends Controller
     {
         $this->authorize('update', $component);
 
-        $component->facts()->where('id', $factId)->delete();
+        $fact = $component->facts()->with('factDefinition')->find($factId);
+        if ($fact) {
+            $component->recordAudit('fact_removed', [$fact->factDefinition->name => $fact->value], []);
+            $fact->delete();
+        }
 
         if (request()->wantsJson()) {
             return response()->json(['success' => true]);
@@ -315,6 +362,10 @@ class ComponentController extends Controller
 
             foreach ($current->outgoingRelationships as $rel) {
                 $target = $rel->targetComponent;
+                if (! $target) {
+                    continue;
+                }
+
                 $edges->push([
                     'id' => 'r'.$rel->id,
                     'source' => 'c'.$current->id,
@@ -338,6 +389,10 @@ class ComponentController extends Controller
 
             foreach ($current->incomingRelationships as $rel) {
                 $source = $rel->sourceComponent;
+                if (! $source) {
+                    continue;
+                }
+
                 $edges->push([
                     'id' => 'r'.$rel->id,
                     'source' => 'c'.$source->id,
@@ -414,32 +469,5 @@ class ComponentController extends Controller
             'label' => $label,
             'direction' => $direction,
         ]);
-    }
-
-    /**
-     * Build a map of component type name → array of required FactDefinition data for use in the create form.
-     *
-     * @return array<string, array<int, array{id: int, name: string, field_type: string, options: array<int, string>|null}>>
-     */
-    private function buildRequiredFactsByType(): array
-    {
-        $allRequired = FactDefinition::query()
-            ->whereNotNull('required_for_types')
-            ->get();
-
-        $map = [];
-
-        foreach ($allRequired as $def) {
-            foreach ($def->required_for_types ?? [] as $typeName) {
-                $map[$typeName][] = [
-                    'id' => $def->id,
-                    'name' => $def->name,
-                    'field_type' => $def->field_type->value,
-                    'options' => $def->options,
-                ];
-            }
-        }
-
-        return $map;
     }
 }

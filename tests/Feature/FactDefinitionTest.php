@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ComponentType;
 use App\Enums\FactFieldType;
 use App\Models\FactDefinition;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,18 +38,6 @@ class FactDefinitionTest extends TestCase
 
         $response->assertRedirect(route('fact-definitions.index'));
         $this->assertDatabaseHas('fact_definitions', ['name' => 'Operating System', 'field_type' => 'text']);
-    }
-
-    public function test_can_create_fact_definition_scoped_to_component_types(): void
-    {
-        $this->post(route('fact-definitions.store'), [
-            'name' => 'RAM',
-            'field_type' => FactFieldType::Number->value,
-            'component_types' => [ComponentType::ItComponent->value],
-        ])->assertRedirect();
-
-        $factDef = FactDefinition::query()->where('name', 'RAM')->firstOrFail();
-        $this->assertContains('IT Component', $factDef->component_types);
     }
 
     public function test_can_create_select_fact_definition_with_options(): void
@@ -110,22 +97,6 @@ class FactDefinitionTest extends TestCase
         FactDefinition::factory()->count(5)->create();
 
         $this->getJson('/api/v1/fact-definitions')->assertOk()->assertJsonCount(5, 'data');
-    }
-
-    public function test_api_filters_fact_definitions_by_component_type(): void
-    {
-        FactDefinition::factory()->create([
-            'name' => 'RAM',
-            'component_types' => [ComponentType::ItComponent->value],
-        ]);
-        FactDefinition::factory()->create([
-            'name' => 'Global Fact',
-            'component_types' => null,
-        ]);
-
-        $response = $this->getJson('/api/v1/fact-definitions?component_type=IT+Component');
-
-        $response->assertOk()->assertJsonCount(2, 'data');
     }
 
     public function test_api_can_create_fact_definition(): void

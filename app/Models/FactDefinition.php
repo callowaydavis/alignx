@@ -6,6 +6,7 @@ use App\Enums\FactFieldType;
 use Database\Factories\FactDefinitionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FactDefinition extends Model
@@ -17,8 +18,6 @@ class FactDefinition extends Model
         'name',
         'field_type',
         'options',
-        'component_types',
-        'required_for_types',
     ];
 
     public function casts(): array
@@ -26,8 +25,6 @@ class FactDefinition extends Model
         return [
             'field_type' => FactFieldType::class,
             'options' => 'array',
-            'component_types' => 'array',
-            'required_for_types' => 'array',
         ];
     }
 
@@ -36,17 +33,15 @@ class FactDefinition extends Model
         return $this->hasMany(ComponentFact::class);
     }
 
-    public function appliesToType(string $type): bool
+    public function factSheets(): BelongsToMany
     {
-        if (empty($this->component_types)) {
-            return true;
-        }
-
-        return in_array($type, $this->component_types);
+        return $this->belongsToMany(FactSheet::class, 'fact_sheet_fact_definition')
+            ->withPivot(['is_required', 'sort_order'])
+            ->withTimestamps();
     }
 
-    public function isRequiredForType(string $type): bool
+    public function conditions(): HasMany
     {
-        return ! empty($this->required_for_types) && in_array($type, $this->required_for_types);
+        return $this->hasMany(FactSheetCondition::class);
     }
 }

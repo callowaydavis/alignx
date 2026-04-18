@@ -46,6 +46,13 @@
             @endforeach
         </select>
 
+        <select name="health" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Health</option>
+            <option value="healthy" @selected(request('health') === 'healthy')>Healthy</option>
+            <option value="at_risk" @selected(request('health') === 'at_risk')>At Risk</option>
+            <option value="critical" @selected(request('health') === 'critical')>Critical</option>
+        </select>
+
         <select name="tag" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All Tags</option>
             @foreach ($allTags as $tag)
@@ -71,12 +78,33 @@
             Filter
         </button>
 
-        @if (request('search') || request('type') || request('lifecycle_stage') || request('tag') || request('include_subcomponents'))
+        @if (request('search') || request('type') || request('lifecycle_stage') || request('tag') || request('include_subcomponents') || request('health') || request('inactive'))
             <a href="{{ route('components.index') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center px-2">
                 Clear
             </a>
         @endif
     </form>
+
+    {{-- Inactive toggle --}}
+    <div class="mb-4 -mt-2 flex items-center gap-3">
+        @if ($showInactive)
+            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+                Viewing inactive components
+            </span>
+            <a href="{{ route('components.index', array_filter(array_merge(request()->except('inactive', 'page'), []))) }}"
+               class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                View active
+            </a>
+        @else
+            <a href="{{ route('components.index', array_filter(array_merge(request()->except('page'), ['inactive' => '1']))) }}"
+               class="text-xs text-gray-500 hover:text-gray-700 font-medium">
+                View inactive components
+            </a>
+        @endif
+    </div>
 
     @if ($components->isEmpty())
         <div class="bg-white rounded-xl border border-gray-200 py-16 text-center">
@@ -107,6 +135,9 @@
                                 <a href="{{ route('components.show', $component) }}" class="font-medium text-blue-600 hover:text-blue-800">
                                     {{ $component->name }}
                                 </a>
+                                @if (! $component->is_active)
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">Inactive</span>
+                                @endif
                                 @if ($includeSubcomponents && $component->parent_id)
                                     <p class="text-xs text-gray-400 mt-0.5">
                                         <a href="{{ route('components.show', $component->parent_id) }}" class="hover:text-gray-600">

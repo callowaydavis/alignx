@@ -9,8 +9,10 @@ use App\Models\Component;
 use App\Models\ComponentTodo;
 use App\Models\ComponentType;
 use App\Models\FactDefinition;
+use App\Models\FactSheet;
 use App\Models\Team;
 use App\Services\ComponentHealthScore;
+use App\Services\FactSheetResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,11 +33,17 @@ class ComponentHealthScoreTest extends TestCase
 
     private function makeRequiredFact(string $typeName, string $factName = 'Required Fact'): FactDefinition
     {
-        return FactDefinition::factory()->create([
+        $type = $this->makeType($typeName);
+        $def = FactDefinition::factory()->create([
             'name' => $factName,
             'field_type' => FactFieldType::Text->value,
-            'required_for_types' => [$typeName],
         ]);
+
+        $sheet = FactSheet::factory()->create(['name' => "Sheet for {$factName}"]);
+        $sheet->componentTypes()->attach($type->id);
+        $sheet->factDefinitions()->attach($def->id, ['is_required' => true, 'sort_order' => 0]);
+
+        return $def;
     }
 
     private function perfectComponent(): Component
@@ -385,10 +393,12 @@ class ComponentHealthScoreTest extends TestCase
         $def = $this->makeRequiredFact('Application');
 
         $component = $this->perfectComponent();
-
-        $requiredFactDefs = FactDefinition::query()->whereNotNull('required_for_types')->get();
-
         $component->load(['owner', 'facts', 'todos']);
+
+        // Collect required fact definitions the same way the index page does
+        $requiredFactDefs = FactSheetResolver::forComponentType($component->type)
+            ->flatMap(fn ($sheet) => $sheet->factDefinitions->filter(fn ($d) => $d->pivot->is_required))
+            ->unique('id');
 
         $hsBatch = ComponentHealthScore::withRequiredFacts($component, $requiredFactDefs);
         $hsSingle = ComponentHealthScore::for($component);

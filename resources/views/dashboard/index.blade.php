@@ -55,7 +55,8 @@
                         $count = $healthDistribution[$key];
                         $pct = $totalRated > 0 ? round(($count / $totalRated) * 100) : 0;
                     @endphp
-                    <div class="rounded-lg border p-4 {{ $cardColor }}">
+                    <a href="{{ route('components.index', ['health' => $key]) }}"
+                       class="rounded-lg border p-4 {{ $cardColor }} block hover:opacity-80 transition-opacity">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm font-medium {{ $textColor }}">{{ $label }}</span>
                             <span class="text-2xl font-bold text-gray-900">{{ $count }}</span>
@@ -64,7 +65,7 @@
                             <div class="h-2 rounded-full {{ $barColor }}" style="width: {{ $pct }}%"></div>
                         </div>
                         <p class="text-xs {{ $textColor }} mt-1">{{ $pct }}% of portfolio</p>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         @else

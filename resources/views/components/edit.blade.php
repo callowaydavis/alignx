@@ -126,6 +126,28 @@
                 @error('description')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
             </div>
 
+            @php $isActiveValue = old('is_active', $component->is_active ? '1' : '0'); @endphp
+            <div class="border-t border-gray-100 pt-5">
+                <p class="text-sm font-medium text-gray-700 mb-3">Status</p>
+                <div class="flex gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="is_active" value="1"
+                               @checked($isActiveValue !== '0')
+                               class="text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">Active</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="is_active" value="0"
+                               @checked($isActiveValue === '0')
+                               class="text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">Inactive</span>
+                    </label>
+                </div>
+                @if (! $component->is_active)
+                    <p class="mt-1.5 text-xs text-amber-600">This component is currently inactive and hidden from normal views.</p>
+                @endif
+            </div>
+
             <div class="flex items-center gap-3 pt-2">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
                     Save Changes

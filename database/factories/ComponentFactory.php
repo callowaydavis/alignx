@@ -17,6 +17,7 @@ class ComponentFactory extends Factory
         return [
             'name' => $this->faker->words(3, true),
             'type' => $this->faker->randomElement(ComponentType::cases())->value,
+            'is_active' => true,
             'description' => $this->faker->optional()->sentence(),
             'lifecycle_stage' => $this->faker->optional()->randomElement(LifecycleStage::cases())?->value,
             'lifecycle_start_date' => $this->faker->optional()->date(),

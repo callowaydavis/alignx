@@ -24,6 +24,7 @@ class Component extends Model
         'name',
         'type',
         'description',
+        'is_active',
         'lifecycle_stage',
         'lifecycle_start_date',
         'lifecycle_end_date',
@@ -32,10 +33,23 @@ class Component extends Model
     public function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'lifecycle_stage' => LifecycleStage::class,
             'lifecycle_start_date' => 'date',
             'lifecycle_end_date' => 'date',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('active', fn (Builder $query) => $query->where('is_active', true));
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?static
+    {
+        return static::withoutGlobalScope('active')
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->first();
     }
 
     public function parent(): BelongsTo

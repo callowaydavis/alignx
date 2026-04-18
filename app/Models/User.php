@@ -71,4 +71,10 @@ class User extends Authenticatable
     {
         return $this->isAdmin() || $this->isEditor();
     }
+
+    /** @return array<int, UserRole> */
+    public static function allRoles(): array
+    {
+        return UserRole::cases();
+    }
 }

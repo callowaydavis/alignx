@@ -5,7 +5,6 @@ namespace App\Http\Requests;
 use App\Enums\FactFieldType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class UpdateFactDefinitionRequest extends FormRequest
@@ -25,10 +24,6 @@ class UpdateFactDefinitionRequest extends FormRequest
             'field_type' => ['required', new Enum(FactFieldType::class)],
             'options' => ['nullable', 'array'],
             'options.*' => ['string', 'max:255'],
-            'component_types' => ['nullable', 'array'],
-            'component_types.*' => [Rule::exists('component_types', 'name')],
-            'required_for_types' => ['nullable', 'array'],
-            'required_for_types.*' => [Rule::exists('component_types', 'name')],
         ];
     }
 }
