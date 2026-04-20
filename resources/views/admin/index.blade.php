@@ -59,6 +59,7 @@
                     ['label' => 'Fact Sheets', 'sub' => 'Group fields into forms with type, permissions, and conditions', 'href' => route('admin.fact-sheets.index'), 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
                     ['label' => 'Tags', 'sub' => 'Create and rename tags used on components', 'href' => route('admin.tags.index'), 'icon' => 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z'],
                     ['label' => 'Component Types', 'sub' => 'Add custom component types beyond the defaults', 'href' => route('admin.component-types.index'), 'icon' => 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'],
+                    ['label' => 'Roles', 'sub' => 'Define roles that can be assigned to components', 'href' => route('admin.roles.index'), 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
                     ['label' => 'Activity Log', 'sub' => 'Review recent changes across all components', 'href' => route('activity.index'), 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
                 ] as $link)
                     <a href="{{ $link['href'] }}"

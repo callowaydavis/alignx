@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\TodoStatus;
 use App\Models\Component;
+use App\Models\Role;
 use Illuminate\Support\Collection;
 
 class ComponentHealthScore
@@ -15,31 +16,40 @@ class ComponentHealthScore
 
     private function __construct(
         private readonly Component $component,
-        private readonly Collection $requiredFactDefs
+        private readonly Collection $requiredFactDefs,
+        private readonly Collection $requiredRoles
     ) {
         $this->calculate();
     }
 
     /**
-     * Create a score for a single component, resolving required facts from fact sheets.
+     * Create a score for a single component, resolving required facts and roles from configured sheets/roles.
      */
     public static function for(Component $component): self
     {
-        $component->loadMissing(['owner', 'facts', 'todos']);
+        $component->loadMissing(['owner', 'facts', 'todos', 'roleAssignments']);
 
         $requiredFactDefs = FactSheetResolver::forComponentType($component->type)
             ->flatMap(fn ($sheet) => $sheet->factDefinitions->filter(fn ($def) => $def->pivot->is_required))
             ->unique('id');
 
-        return new self($component, $requiredFactDefs);
+        $requiredRoles = Role::query()
+            ->with('componentTypes')
+            ->where('is_required', true)
+            ->get()
+            ->filter(fn ($role) => $role->appliesToComponentType($component->type));
+
+        return new self($component, $requiredFactDefs, $requiredRoles);
     }
 
     /**
-     * Create a score using pre-loaded required fact definitions (for batch use — no extra queries per component).
+     * Create a score using pre-loaded required fact definitions and roles (for batch use — no extra queries per component).
      */
-    public static function withRequiredFacts(Component $component, Collection $requiredFactDefs): self
+    public static function withRequiredFacts(Component $component, Collection $requiredFactDefs, ?Collection $requiredRoles = null): self
     {
-        return new self($component, $requiredFactDefs);
+        $component->loadMissing(['roleAssignments']);
+
+        return new self($component, $requiredFactDefs, $requiredRoles ?? collect());
     }
 
     public function score(): int
@@ -105,6 +115,22 @@ class ComponentHealthScore
             $breakdown[] = ['label' => "Missing required facts ({$missingCount})", 'delta' => -$deduction, 'status' => 'bad'];
         } else {
             $breakdown[] = ['label' => 'Required facts complete', 'delta' => 0, 'status' => 'ok'];
+        }
+
+        // Missing required roles: −10 each, max −20
+        if ($this->requiredRoles->isNotEmpty()) {
+            $assignedRoleIds = $this->component->roleAssignments->pluck('role_id')->unique();
+            $missingRoleCount = $this->requiredRoles->filter(
+                fn ($role) => ! $assignedRoleIds->contains($role->id)
+            )->count();
+
+            if ($missingRoleCount > 0) {
+                $deduction = min($missingRoleCount * 10, 20);
+                $score -= $deduction;
+                $breakdown[] = ['label' => "Missing required roles ({$missingRoleCount})", 'delta' => -$deduction, 'status' => 'bad'];
+            } else {
+                $breakdown[] = ['label' => 'Required roles filled', 'delta' => 0, 'status' => 'ok'];
+            }
         }
 
         // Open to-dos: −5 each, max −15

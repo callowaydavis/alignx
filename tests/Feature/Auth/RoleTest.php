@@ -5,7 +5,6 @@ namespace Tests\Feature\Auth;
 use App\Enums\ComponentType;
 use App\Enums\FactFieldType;
 use App\Models\Component;
-use App\Models\FactDefinition;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

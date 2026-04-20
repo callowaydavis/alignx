@@ -4,11 +4,14 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ComponentTypeController;
 use App\Http\Controllers\Admin\FactSheetController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\ComponentController;
+use App\Http\Controllers\ComponentDocumentController;
 use App\Http\Controllers\ComponentFactSheetController;
+use App\Http\Controllers\ComponentRoleAssignmentController;
 use App\Http\Controllers\ComponentTodoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
@@ -44,6 +47,10 @@ Route::middleware('auth')->group(function () {
         ->name('components.facts.destroy');
     Route::post('components/{component}/fact-sheets/{factSheet}', [ComponentFactSheetController::class, 'submit'])
         ->name('components.fact-sheets.submit');
+    Route::post('components/{component}/role-assignments', [ComponentRoleAssignmentController::class, 'store'])
+        ->name('components.role-assignments.store');
+    Route::delete('components/{component}/role-assignments/{assignment}', [ComponentRoleAssignmentController::class, 'destroy'])
+        ->name('components.role-assignments.destroy');
 
     Route::post('components/{component}/todos', [ComponentTodoController::class, 'store'])
         ->name('components.todos.store');
@@ -51,6 +58,13 @@ Route::middleware('auth')->group(function () {
         ->name('components.todos.update');
     Route::delete('components/{component}/todos/{todo}', [ComponentTodoController::class, 'destroy'])
         ->name('components.todos.destroy');
+
+    Route::post('components/{component}/documents', [ComponentDocumentController::class, 'store'])
+        ->name('components.documents.store');
+    Route::get('components/{component}/documents/{document}', [ComponentDocumentController::class, 'show'])
+        ->name('components.documents.show');
+    Route::delete('components/{component}/documents/{document}', [ComponentDocumentController::class, 'destroy'])
+        ->name('components.documents.destroy');
 
     Route::resource('fact-definitions', FactDefinitionController::class)->except(['show']);
 
@@ -67,6 +81,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('tags', TagController::class)->except(['show', 'create', 'edit']);
         Route::resource('component-types', ComponentTypeController::class)->except(['show', 'create', 'edit'])
             ->parameter('component-types', 'componentType');
+        Route::resource('roles', RoleController::class)->except(['show']);
         Route::resource('fact-sheets', FactSheetController::class)
             ->parameter('fact-sheets', 'factSheet');
         Route::post('fact-sheets/{factSheet}/definitions', [FactSheetController::class, 'addDefinition'])

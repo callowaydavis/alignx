@@ -106,4 +106,14 @@ class Component extends Model
     {
         return $this->hasMany(ComponentTodo::class);
     }
+
+    public function roleAssignments(): HasMany
+    {
+        return $this->hasMany(ComponentRoleAssignment::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ComponentDocument::class);
+    }
 }

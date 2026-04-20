@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Database\Factories\ComponentRelationshipFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ComponentRelationship extends Model
 {
-    /** @use HasFactory<\Database\Factories\ComponentRelationshipFactory> */
+    /** @use HasFactory<ComponentRelationshipFactory> */
     use HasFactory;
 
     protected $fillable = [

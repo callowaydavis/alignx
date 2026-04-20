@@ -28,6 +28,11 @@
                             'fact_added'           => ['label' => 'Fact Added',           'color' => 'bg-teal-100 text-teal-700'],
                             'fact_updated'         => ['label' => 'Fact Updated',         'color' => 'bg-teal-100 text-teal-700'],
                             'fact_removed'         => ['label' => 'Fact Removed',         'color' => 'bg-teal-100 text-teal-700'],
+                            'role_assigned'        => ['label' => 'Role Assigned',        'color' => 'bg-indigo-100 text-indigo-700'],
+                            'role_unassigned'      => ['label' => 'Role Unassigned',      'color' => 'bg-indigo-100 text-indigo-700'],
+                            'document_uploaded'    => ['label' => 'Document Uploaded',    'color' => 'bg-orange-100 text-orange-700'],
+                            'document_viewed'      => ['label' => 'Document Viewed',      'color' => 'bg-gray-100 text-gray-700'],
+                            'document_removed'     => ['label' => 'Document Removed',     'color' => 'bg-red-100 text-red-700'],
                         ];
                         $meta = $eventMeta[$audit->event] ?? ['label' => ucfirst($audit->event), 'color' => 'bg-gray-100 text-gray-700'];
                     @endphp
@@ -50,7 +55,16 @@
                         </td>
                         <td class="px-6 py-4 text-gray-600">{{ $audit->user?->name ?? 'System' }}</td>
                         <td class="px-6 py-4 text-gray-500 text-xs space-y-0.5">
-                            @if (in_array($audit->event, ['relationship_added', 'relationship_removed']))
+                            @if (in_array($audit->event, ['role_assigned', 'role_unassigned']))
+                                @php $vals = $audit->new_values ?: $audit->old_values; @endphp
+                                @if ($vals)
+                                    <span class="block">
+                                        <span class="font-medium text-gray-700">{{ $vals['role'] ?? '—' }}</span>
+                                        <span class="text-gray-400 mx-1">→</span>
+                                        {{ $vals['assignee'] ?? '—' }}
+                                    </span>
+                                @endif
+                            @elseif (in_array($audit->event, ['relationship_added', 'relationship_removed']))
                                 @php $vals = $audit->new_values ?: $audit->old_values; @endphp
                                 @if ($vals)
                                     <span class="block">

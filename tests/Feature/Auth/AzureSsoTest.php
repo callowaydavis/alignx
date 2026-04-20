@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Contracts\Factory as SocialiteFactory;
+use Laravel\Socialite\Two\AbstractProvider;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Mockery;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class AzureSsoTest extends TestCase
         $socialiteUser->shouldReceive('getId')->andReturn($id);
         $socialiteUser->shouldReceive('getEmail')->andReturn($email);
 
-        $provider = Mockery::mock(\Laravel\Socialite\Two\AbstractProvider::class);
+        $provider = Mockery::mock(AbstractProvider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
         $socialite = Mockery::mock(SocialiteFactory::class);
@@ -30,7 +31,7 @@ class AzureSsoTest extends TestCase
 
     public function test_azure_redirect_route_redirects_to_microsoft(): void
     {
-        $provider = Mockery::mock(\Laravel\Socialite\Two\AbstractProvider::class);
+        $provider = Mockery::mock(AbstractProvider::class);
         $provider->shouldReceive('redirect')->andReturn(redirect('https://login.microsoftonline.com/fake'));
 
         $socialite = Mockery::mock(SocialiteFactory::class);

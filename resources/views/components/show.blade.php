@@ -35,7 +35,7 @@
         </div>
     @endif
 
-    {{-- Missing required facts warning --}}
+    {{-- Missing required facts / roles warning --}}
     @php
         $existingFactDefIds = $component->facts->pluck('fact_definition_id');
         $missingRequired = $applicableSheets
@@ -43,18 +43,27 @@
             ->unique('id')
             ->whereNotIn('id', $existingFactDefIds)
             ->values();
+
+        $assignedRoleIds = $component->roleAssignments->pluck('role_id')->unique();
+        $missingRequiredRoles = $applicableRoles
+            ->filter(fn ($role) => $role->is_required && ! $assignedRoleIds->contains($role->id))
+            ->values();
     @endphp
-    @if ($missingRequired->isNotEmpty())
+    @if ($missingRequired->isNotEmpty() || $missingRequiredRoles->isNotEmpty())
         <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
             <svg class="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
             </svg>
-            <div class="text-sm">
-                <p class="font-medium text-amber-800">Missing required facts</p>
-                <p class="text-amber-700 mt-0.5">
-                    {{ $missingRequired->pluck('name')->join(', ') }}
-                </p>
+            <div class="text-sm space-y-1">
+                @if ($missingRequired->isNotEmpty())
+                    <p class="font-medium text-amber-800">Missing required facts</p>
+                    <p class="text-amber-700">{{ $missingRequired->pluck('name')->join(', ') }}</p>
+                @endif
+                @if ($missingRequiredRoles->isNotEmpty())
+                    <p class="font-medium text-amber-800 {{ $missingRequired->isNotEmpty() ? 'mt-2' : '' }}">Missing required roles</p>
+                    <p class="text-amber-700">{{ $missingRequiredRoles->pluck('name')->join(', ') }}</p>
+                @endif
             </div>
         </div>
     @endif
@@ -83,6 +92,15 @@
         <button data-switch-tab="history"
                 class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-gray-500 hover:text-gray-700">
             History
+        </button>
+        <button data-switch-tab="documents"
+                class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-gray-500 hover:text-gray-700">
+            Documents
+            @if ($component->documents->isNotEmpty())
+                <span class="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+                    {{ $component->documents->count() }}
+                </span>
+            @endif
         </button>
         <button data-switch-tab="todos"
                 class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-gray-500 hover:text-gray-700">
@@ -253,6 +271,130 @@
                         </div>
                     @endif
                 </div>
+
+                {{-- Roles --}}
+                @if ($applicableRoles->isNotEmpty())
+                    @php $assignmentsByRoleId = $component->roleAssignments->groupBy('role_id'); @endphp
+                    <div class="bg-white rounded-xl border border-gray-200">
+                        <div class="px-5 py-4 border-b border-gray-100">
+                            <h2 class="font-semibold text-gray-800">Roles</h2>
+                        </div>
+                        <div class="divide-y divide-gray-50">
+                            @foreach ($applicableRoles as $role)
+                                @php $roleAssignments = $assignmentsByRoleId->get($role->id, collect()); @endphp
+                                <div class="px-5 py-4">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex-1">
+                                            <p class="text-xs font-medium text-gray-500 mb-1.5">{{ $role->name }}</p>
+                                            @if ($roleAssignments->isNotEmpty())
+                                                <div class="flex flex-wrap gap-2">
+                                                    @foreach ($roleAssignments as $assignment)
+                                                        <div class="flex items-center gap-1.5 bg-gray-100 rounded-full pl-2.5 pr-1.5 py-0.5">
+                                                            <span class="text-sm text-gray-700">{{ $assignment->assigneeName() }}</span>
+                                                            @can('update', $component)
+                                                                <form method="POST"
+                                                                      action="{{ route('components.role-assignments.destroy', [$component, $assignment]) }}"
+                                                                      onsubmit="return confirm('Remove this role assignment?')">
+                                                                    @csrf @method('DELETE')
+                                                                    <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors">
+                                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                </form>
+                                                            @endcan
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <p class="text-sm text-gray-400 italic">Unassigned</p>
+                                            @endif
+                                        </div>
+
+                                        @can('update', $component)
+                                            @if ($role->allow_multiple || $roleAssignments->isEmpty())
+                                                <button type="button" data-open-modal="role-modal-{{ $role->id }}"
+                                                        class="shrink-0 text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap mt-0.5">
+                                                    + Assign
+                                                </button>
+                                            @endif
+                                        @endcan
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Role assignment modals --}}
+                    @can('update', $component)
+                        @foreach ($applicableRoles as $role)
+                            @if ($role->allow_multiple || $assignmentsByRoleId->get($role->id, collect())->isEmpty())
+                                <div id="role-modal-{{ $role->id }}"
+                                     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-50"
+                                     data-modal-backdrop="role-modal-{{ $role->id }}">
+                                    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm">
+                                        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                                            <h3 class="font-semibold text-gray-800">Assign {{ $role->name }}</h3>
+                                            <button type="button" data-close-modal="role-modal-{{ $role->id }}"
+                                                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <form method="POST" action="{{ route('components.role-assignments.store', $component) }}"
+                                              class="px-5 py-4 space-y-4">
+                                            @csrf
+                                            <input type="hidden" name="role_id" value="{{ $role->id }}">
+
+                                            @if ($role->assignee_type->value === 'user' || $role->assignee_type->value === 'either')
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">
+                                                        User{{ $role->assignee_type->value === 'either' ? ' (optional if team selected)' : '' }}
+                                                    </label>
+                                                    <select name="user_id"
+                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                        <option value="">Select user...</option>
+                                                        @foreach ($activeUsers as $user)
+                                                            <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
+
+                                            @if ($role->assignee_type->value === 'team' || $role->assignee_type->value === 'either')
+                                                @php $allTeams = \App\Models\Team::query()->orderBy('name')->get(); @endphp
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">
+                                                        Team{{ $role->assignee_type->value === 'either' ? ' (optional if user selected)' : '' }}
+                                                    </label>
+                                                    <select name="team_id"
+                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                        <option value="">Select team...</option>
+                                                        @foreach ($allTeams as $team)
+                                                            <option value="{{ $team->id }}">{{ $team->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
+
+                                            <div class="flex items-center gap-3 pt-1">
+                                                <button type="submit"
+                                                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                                                    Assign
+                                                </button>
+                                                <button type="button" data-close-modal="role-modal-{{ $role->id }}"
+                                                        class="text-sm text-gray-500 hover:text-gray-700">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+                    @endcan
+                @endif
 
                 {{-- Relationships --}}
                 <div class="bg-white rounded-xl border border-gray-200">
@@ -499,6 +641,11 @@
         @include('components._diagrams')
     </div>
 
+    {{-- Documents tab --}}
+    <div data-tab-content="documents" class="hidden" id="documents">
+        @include('components._documents')
+    </div>
+
     {{-- To Dos tab --}}
     <div data-tab-content="todos" class="hidden" id="todos">
         @include('components._todos')
@@ -528,6 +675,11 @@
                                 'fact_added'           => ['label' => 'Fact Added',           'color' => 'bg-teal-100 text-teal-700'],
                                 'fact_updated'         => ['label' => 'Fact Updated',         'color' => 'bg-teal-100 text-teal-700'],
                                 'fact_removed'         => ['label' => 'Fact Removed',         'color' => 'bg-teal-100 text-teal-700'],
+                                'role_assigned'        => ['label' => 'Role Assigned',        'color' => 'bg-indigo-100 text-indigo-700'],
+                                'role_unassigned'      => ['label' => 'Role Unassigned',      'color' => 'bg-indigo-100 text-indigo-700'],
+                                'document_uploaded'    => ['label' => 'Document Uploaded',    'color' => 'bg-orange-100 text-orange-700'],
+                                'document_viewed'      => ['label' => 'Document Viewed',      'color' => 'bg-gray-100 text-gray-700'],
+                                'document_removed'     => ['label' => 'Document Removed',     'color' => 'bg-red-100 text-red-700'],
                             ];
                             $meta = $eventMeta[$audit->event] ?? ['label' => ucfirst($audit->event), 'color' => 'bg-gray-100 text-gray-700'];
                         @endphp
@@ -548,6 +700,15 @@
                                             <span class="font-medium text-gray-700">{{ $vals['target'] ?? '—' }}</span>
                                             <span class="text-gray-400 mx-1">·</span>
                                             {{ $vals['type'] ?? '—' }}
+                                        </span>
+                                    @endif
+                                @elseif (in_array($audit->event, ['role_assigned', 'role_unassigned']))
+                                    @php $vals = $audit->new_values ?: $audit->old_values; @endphp
+                                    @if ($vals)
+                                        <span class="block">
+                                            <span class="font-medium text-gray-700">{{ $vals['role'] ?? '—' }}</span>
+                                            <span class="text-gray-400 mx-1">→</span>
+                                            {{ $vals['assignee'] ?? '—' }}
                                         </span>
                                     @endif
                                 @elseif ($audit->event === 'updated' && $audit->new_values)

@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="max-w-lg">
-        <form method="POST" action="{{ route('fact-definitions.update', $factDefinition) }}" class="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        <form name="factDefinitionForm" method="POST" action="{{ route('fact-definitions.update', $factDefinition) }}" class="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
             @csrf @method('PUT')
 
             <div>
@@ -50,7 +50,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            document.querySelector('form').addEventListener('submit', function () {
+            document.querySelector('form[name="factDefinitionForm"]').addEventListener('submit', function () {
                 const textarea = document.getElementById('select-options-input');
                 const fieldType = document.getElementById('field_type').value;
                 if (fieldType === 'select' && textarea) {
@@ -60,7 +60,7 @@
                         inp.type = 'hidden';
                         inp.name = 'options[]';
                         inp.value = opt;
-                        document.querySelector('form').appendChild(inp);
+                        document.querySelector('form[name="factDefinitionForm"]').appendChild(inp);
                     });
                 }
             });

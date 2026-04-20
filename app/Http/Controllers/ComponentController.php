@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateComponentRequest;
 use App\Models\Component;
 use App\Models\ComponentRelationship;
 use App\Models\ComponentType;
+use App\Models\Role;
 use App\Models\Tag;
 use App\Models\Team;
 use App\Models\User;
@@ -153,9 +154,19 @@ class ComponentController extends Controller
             'owner',
             'todos.acceptedByUser',
             'todos.completedByUser',
+            'documents.uploadedBy',
+            'roleAssignments.role',
+            'roleAssignments.user',
+            'roleAssignments.team',
         ]);
 
         $applicableSheets = FactSheetResolver::forComponent($component, Auth::user());
+
+        $applicableRoles = Role::query()
+            ->with('componentTypes')
+            ->get()
+            ->filter(fn (Role $role) => $role->appliesToComponentType($component->type))
+            ->values();
 
         $subcomponentIds = $component->subcomponents->pluck('id');
 
@@ -179,7 +190,7 @@ class ComponentController extends Controller
         $healthScore = ComponentHealthScore::for($component);
 
         return view('components.show', compact(
-            'component', 'applicableSheets', 'availableComponents', 'allTags', 'audits',
+            'component', 'applicableSheets', 'applicableRoles', 'availableComponents', 'allTags', 'audits',
             'todoCategories', 'todoStatuses', 'activeUsers',
             'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups', 'healthScore'
         ));
