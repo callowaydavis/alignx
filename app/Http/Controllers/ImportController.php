@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ImportComponentRequest;
 use App\Models\Component;
 use App\Models\ComponentType;
+use App\Models\FactDefinition;
 use App\Models\Tag;
-use App\Models\User;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ImportController extends Controller
@@ -39,6 +41,13 @@ class ImportController extends Controller
 
         $headers = array_map('trim', $headers);
 
+        // Load lookups once before the loop
+        $factDefinitions = FactDefinition::query()
+            ->orderBy('name')
+            ->get()
+            ->keyBy(fn ($fd) => strtolower($fd->name));
+        $validTypes = ComponentType::query()->pluck('name')->all();
+
         $rows = [];
         $rowCount = 0;
         $exceeded = false;
@@ -53,7 +62,7 @@ class ImportController extends Controller
 
             $data = array_pad($data, count($headers), '');
             $row = array_combine($headers, array_slice($data, 0, count($headers)));
-            $rows[] = $this->validateRow($row, $rowCount);
+            $rows[] = $this->validateRow($row, $rowCount, $factDefinitions, $validTypes);
         }
 
         fclose($handle);
@@ -71,6 +80,7 @@ class ImportController extends Controller
         $rows = $request->session()->pull('import_rows', []);
 
         $created = 0;
+        $updated = 0;
         $skipped = 0;
 
         foreach ($rows as $row) {
@@ -81,14 +91,28 @@ class ImportController extends Controller
             }
 
             $data = $row['data'];
+            $action = $data['_action'] ?? 'create';
+            $facts = $data['_facts'] ?? [];
+
+            // Extract tags before cleanup
             $tagNames = ! empty($data['tags'])
                 ? array_filter(array_map('trim', explode(',', $data['tags'])))
                 : [];
 
-            unset($data['id'], $data['tags'], $data['owner']);
+            // Remove internal/non-fillable keys
+            unset($data['id'], $data['_action'], $data['_component_id'], $data['_facts'],
+                $data['tags'], $data['owner']);
 
-            $component = Component::query()->create($data);
+            if ($action === 'update') {
+                $component = Component::withoutGlobalScope('active')->find($row['data']['_component_id']);
+                $component->update($data);
+                $updated++;
+            } else {
+                $component = Component::query()->create($data);
+                $created++;
+            }
 
+            // Sync tags
             if ($tagNames) {
                 $tagIds = collect($tagNames)->map(
                     fn ($name) => Tag::query()->firstOrCreate(['name' => $name])->id
@@ -96,22 +120,31 @@ class ImportController extends Controller
                 $component->tags()->sync($tagIds);
             }
 
-            $created++;
+            // Sync facts
+            foreach ($facts as $factDefinitionId => $value) {
+                $component->facts()->updateOrCreate(
+                    ['fact_definition_id' => $factDefinitionId],
+                    ['value' => $value]
+                );
+            }
         }
 
         return redirect()->route('components.index')
-            ->with('success', "Import complete: {$created} created, {$skipped} skipped.");
+            ->with('success', "Import complete: {$created} created, {$updated} updated, {$skipped} skipped.");
     }
 
     /**
      * @param  array<string, string>  $row
-     * @return array{data: array<string, mixed>, errors: list<string>}
+     * @param  Collection<string, FactDefinition>  $factDefinitions  keyed by lowercase name
+     * @param  array<string>  $validTypes
+     * @return array{data: array<string, mixed>, errors: list<string>, action: string}
      */
-    private function validateRow(array $row, int $rowNumber): array
+    private function validateRow(array $row, int $rowNumber, Collection $factDefinitions, array $validTypes): array
     {
         $errors = [];
         $data = [];
 
+        // Extract standard component fields
         $data['id'] = $row['id'] ?? null;
         $data['name'] = trim($row['name'] ?? '');
         $data['type'] = trim($row['type'] ?? '');
@@ -122,24 +155,67 @@ class ImportController extends Controller
         $data['tags'] = $row['tags'] ?? '';
         $data['owner'] = $row['owner'] ?? null;
 
-        if (empty($data['name'])) {
-            $errors[] = 'Name is required.';
+        // Determine if this is a create or update
+        $rawId = trim($row['id'] ?? '');
+
+        if ($rawId !== '') {
+            // Update path: look up the component (bypass active scope)
+            $existing = Component::withoutGlobalScope('active')->find((int) $rawId);
+            if (! $existing) {
+                $errors[] = "No component found with ID {$rawId}.";
+                $data['_action'] = 'update';
+            } else {
+                $data['_action'] = 'update';
+                $data['_component_id'] = $existing->id;
+                // Allow name/type to fall back to existing values if blank in CSV
+                if (empty($data['name'])) {
+                    $data['name'] = $existing->name;
+                }
+                if (empty($data['type'])) {
+                    $data['type'] = $existing->type;
+                }
+            }
+        } else {
+            $data['_action'] = 'create';
         }
 
-        $validTypes = ComponentType::query()->pluck('name')->all();
+        // Validate required fields only for creates, or updates with blank values
+        if ($data['_action'] === 'create' || ($data['_action'] === 'update' && empty($data['name']))) {
+            if (empty($data['name'])) {
+                $errors[] = 'Name is required.';
+            }
+        }
 
         if (empty($data['type']) || ! in_array($data['type'], $validTypes)) {
             $errors[] = "Invalid type: '{$data['type']}'. Must be one of: ".implode(', ', $validTypes).'.';
         }
 
+        // Owner: resolve by Team name (fix from original which used User)
         if (! empty($data['owner'])) {
-            $owner = User::query()->where('name', $data['owner'])->first();
-
-            if ($owner) {
-                $data['owner_id'] = $owner->id;
+            $team = Team::query()->where('name', $data['owner'])->first();
+            if ($team) {
+                $data['owner_id'] = $team->id;
             }
         }
 
-        return ['data' => $data, 'errors' => $errors];
+        // Extract fact definitions from row
+        $knownFields = ['id', 'name', 'type', 'description', 'lifecycle_stage',
+            'lifecycle_start_date', 'lifecycle_end_date', 'tags', 'owner'];
+        $facts = [];
+
+        foreach ($row as $header => $value) {
+            if (in_array(strtolower($header), array_map('strtolower', $knownFields))) {
+                continue;
+            }
+
+            $fd = $factDefinitions->get(strtolower($header));
+            if ($fd && $value !== '') {
+                $facts[$fd->id] = $value;
+            }
+        }
+
+        $data['_facts'] = $facts;
+
+        return ['data' => $data, 'errors' => $errors, 'action' => $data['_action']];
     }
 }
