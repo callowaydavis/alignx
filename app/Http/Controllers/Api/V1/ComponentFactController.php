@@ -15,7 +15,7 @@ class ComponentFactController extends Controller
 {
     public function index(Component $component): AnonymousResourceCollection
     {
-        $facts = $component->facts()->with('factDefinition')->get();
+        $facts = $component->facts()->with('attribute')->get();
 
         return ComponentFactResource::collection($facts);
     }
@@ -23,18 +23,18 @@ class ComponentFactController extends Controller
     public function store(StoreComponentFactRequest $request, Component $component): ComponentFactResource
     {
         $fact = $component->facts()->updateOrCreate(
-            ['fact_definition_id' => $request->integer('fact_definition_id')],
+            ['attribute_id' => $request->integer('attribute_id')],
             ['value' => $request->input('value')]
         );
 
-        $fact->load('factDefinition');
+        $fact->load('attribute');
 
         return new ComponentFactResource($fact);
     }
 
     public function show(Component $component, ComponentFact $fact): ComponentFactResource
     {
-        $fact->load('factDefinition');
+        $fact->load('attribute');
 
         return new ComponentFactResource($fact);
     }
@@ -43,7 +43,7 @@ class ComponentFactController extends Controller
     {
         $fact->update($request->validated());
 
-        $fact->load('factDefinition');
+        $fact->load('attribute');
 
         return new ComponentFactResource($fact);
     }

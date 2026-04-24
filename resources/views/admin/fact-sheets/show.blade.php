@@ -80,7 +80,7 @@
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 space-y-3">
                         <form method="POST" action="{{ route('admin.fact-sheets.conditions.add', $factSheet) }}" class="space-y-2">
                             @csrf
-                            <select name="fact_definition_id" required
+                            <select name="attribute_id" required
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select a fact field...</option>
                                 @foreach ($allDefinitions as $def)
@@ -110,7 +110,7 @@
                     @forelse ($factSheet->conditions as $condition)
                         <div class="flex items-center justify-between px-5 py-3">
                             <div class="text-sm text-gray-700">
-                                <span class="font-medium">{{ $condition->factDefinition->name }}</span>
+                                <span class="font-medium">{{ $condition->attribute->name }}</span>
                                 <span class="text-gray-400"> {{ $condition->operator->label() }}</span>
                                 @if ($condition->operator->requiresValue())
                                     <span class="font-medium"> "{{ $condition->value }}"</span>
@@ -147,7 +147,7 @@
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                         <form method="POST" action="{{ route('admin.fact-sheets.definitions.add', $factSheet) }}" class="flex items-center gap-3">
                             @csrf
-                            <select name="fact_definition_id" required
+                            <select name="attribute_id" required
                                     class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Add a fact field...</option>
                                 @foreach ($availableDefinitions as $def)
@@ -167,7 +167,7 @@
                 @endcan
 
                 <div class="divide-y divide-gray-100">
-                    @forelse ($factSheet->factDefinitions->sortBy('pivot.sort_order') as $def)
+                    @forelse ($factSheet->attributes->sortBy('pivot.sort_order') as $def)
                         <div class="flex items-center justify-between px-6 py-3">
                             <div class="flex items-center gap-3">
                                 <span class="text-sm font-medium text-gray-800">{{ $def->name }}</span>
@@ -206,7 +206,7 @@
                     @empty
                         <div class="px-6 py-10 text-center text-gray-400 text-sm">
                             No fields yet.
-                            <a href="{{ route('fact-definitions.create') }}" class="text-blue-600 hover:underline">Create fact definitions</a> to add them here.
+                            <a href="{{ route('attributes.create') }}" class="text-blue-600 hover:underline">Create attributes</a> to add them here.
                         </div>
                     @endforelse
                 </div>

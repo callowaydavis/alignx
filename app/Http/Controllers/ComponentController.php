@@ -147,7 +147,7 @@ class ComponentController extends Controller
         $component->load([
             'parent',
             'subcomponents',
-            'facts.factDefinition',
+            'facts.attribute',
             'tags',
             'outgoingRelationships.targetComponent',
             'incomingRelationships.sourceComponent',
@@ -183,16 +183,25 @@ class ComponentController extends Controller
         $todoCategories = TodoCategory::cases();
         $todoStatuses = TodoStatus::cases();
         $activeUsers = User::query()->where('is_active', true)->orderBy('name')->get();
+        $allTeams = Team::query()->orderBy('name')->get();
 
         ['graphData' => $graphData, 'graphNodes' => $graphNodes, 'graphEdges' => $graphEdges, 'landscapeGroups' => $landscapeGroups]
             = $this->buildDiagramGraph($component);
 
         $healthScore = ComponentHealthScore::for($component);
 
+        $raciMatrix = $component->raciMatrix()->first();
+        if ($raciMatrix) {
+            $raciMatrix->load([
+                'columns' => fn ($q) => $q->orderBy('sort_order'),
+                'rows' => fn ($q) => $q->orderBy('sort_order')->with('assignments'),
+            ]);
+        }
+
         return view('components.show', compact(
             'component', 'applicableSheets', 'applicableRoles', 'availableComponents', 'allTags', 'audits',
-            'todoCategories', 'todoStatuses', 'activeUsers',
-            'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups', 'healthScore'
+            'todoCategories', 'todoStatuses', 'activeUsers', 'allTeams',
+            'graphData', 'graphNodes', 'graphEdges', 'landscapeGroups', 'healthScore', 'raciMatrix'
         ));
     }
 
@@ -280,20 +289,20 @@ class ComponentController extends Controller
         $this->authorize('update', $component);
 
         $request->validate([
-            'fact_definition_id' => ['required', 'integer', 'exists:fact_definitions,id'],
+            'attribute_id' => ['required', 'integer', 'exists:attributes,id'],
             'value' => ['nullable', 'string'],
         ]);
 
-        $defId = $request->integer('fact_definition_id');
-        $oldValue = $component->facts()->where('fact_definition_id', $defId)->value('value');
+        $defId = $request->integer('attribute_id');
+        $oldValue = $component->facts()->where('attribute_id', $defId)->value('value');
 
         $fact = $component->facts()->updateOrCreate(
-            ['fact_definition_id' => $defId],
+            ['attribute_id' => $defId],
             ['value' => $request->input('value')]
         );
 
-        $fact->load('factDefinition');
-        $defName = $fact->factDefinition->name;
+        $fact->load('attribute');
+        $defName = $fact->attribute->name;
         $newValue = $fact->value;
 
         if ($fact->wasRecentlyCreated) {
@@ -307,11 +316,11 @@ class ComponentController extends Controller
                 'fact' => [
                     'id' => $fact->id,
                     'value' => $fact->value,
-                    'fact_definition' => [
-                        'id' => $fact->factDefinition->id,
-                        'name' => $fact->factDefinition->name,
-                        'field_type' => $fact->factDefinition->field_type->value,
-                        'options' => $fact->factDefinition->options,
+                    'attribute' => [
+                        'id' => $fact->attribute->id,
+                        'name' => $fact->attribute->name,
+                        'field_type' => $fact->attribute->field_type->value,
+                        'options' => $fact->attribute->options,
                     ],
                 ],
             ]);
@@ -325,9 +334,9 @@ class ComponentController extends Controller
     {
         $this->authorize('update', $component);
 
-        $fact = $component->facts()->with('factDefinition')->find($factId);
+        $fact = $component->facts()->with('attribute')->find($factId);
         if ($fact) {
-            $component->recordAudit('fact_removed', [$fact->factDefinition->name => $fact->value], []);
+            $component->recordAudit('fact_removed', [$fact->attribute->name => $fact->value], []);
             $fact->delete();
         }
 

@@ -24,21 +24,22 @@
         @foreach ($types as $type)
             @php
                 $colors = [
-                    'Application' => 'bg-blue-50 border-blue-200',
-                    'Interface' => 'bg-purple-50 border-purple-200',
-                    'Data Object' => 'bg-green-50 border-green-200',
-                    'IT Component' => 'bg-orange-50 border-orange-200',
-                    'Provider' => 'bg-teal-50 border-teal-200',
-                    'Process' => 'bg-yellow-50 border-yellow-200',
-                    'Business Capability' => 'bg-red-50 border-red-200',
+                    'Application' => 'bg-blue-50 border-blue-200 hover:bg-blue-100',
+                    'Interface' => 'bg-purple-50 border-purple-200 hover:bg-purple-100',
+                    'Data Object' => 'bg-green-50 border-green-200 hover:bg-green-100',
+                    'IT Component' => 'bg-orange-50 border-orange-200 hover:bg-orange-100',
+                    'Provider' => 'bg-teal-50 border-teal-200 hover:bg-teal-100',
+                    'Process' => 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100',
+                    'Business Capability' => 'bg-red-50 border-red-200 hover:bg-red-100',
                 ];
-                $cardClass = $colors[$type->value] ?? 'bg-gray-50 border-gray-200';
+                $cardClass = $colors[$type->value] ?? 'bg-gray-50 border-gray-200 hover:bg-gray-100';
                 $count = $countsByType[$type->value] ?? 0;
             @endphp
-            <div class="rounded-xl border p-5 {{ $cardClass }}">
+            <a href="{{ route('components.index', ['type' => $type->value]) }}"
+               class="rounded-xl border p-5 {{ $cardClass }} block transition-colors">
                 <p class="text-xs text-gray-500 mb-1">{{ $type->value }}</p>
                 <p class="text-2xl font-bold text-gray-900">{{ $count }}</p>
-            </div>
+            </a>
         @endforeach
     </div>
 

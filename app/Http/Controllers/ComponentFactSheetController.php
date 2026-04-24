@@ -18,11 +18,11 @@ class ComponentFactSheetController extends Controller
             abort(403, 'You do not have permission to fill out this fact sheet.');
         }
 
-        $factSheet->load('factDefinitions');
+        $factSheet->load('attributes');
 
         // Build validation rules dynamically from the sheet's fields
         $rules = [];
-        foreach ($factSheet->factDefinitions as $def) {
+        foreach ($factSheet->attributes as $def) {
             $isRequired = (bool) $def->pivot->is_required;
             $rules["facts.{$def->id}"] = $isRequired
                 ? ['required', 'string', 'max:10000']
@@ -32,20 +32,20 @@ class ComponentFactSheetController extends Controller
         $validated = $request->validate($rules);
         $factValues = $validated['facts'] ?? [];
 
-        $defIds = $factSheet->factDefinitions->pluck('id');
+        $defIds = $factSheet->attributes->pluck('id');
         $existingFacts = $component->facts()
-            ->whereIn('fact_definition_id', $defIds)
+            ->whereIn('attribute_id', $defIds)
             ->get()
-            ->keyBy('fact_definition_id');
+            ->keyBy('attribute_id');
 
-        foreach ($factSheet->factDefinitions as $def) {
+        foreach ($factSheet->attributes as $def) {
             $value = $factValues[$def->id] ?? null;
 
             if ($value !== null && trim($value) !== '') {
                 $oldValue = $existingFacts->get($def->id)?->value;
 
                 $fact = $component->facts()->updateOrCreate(
-                    ['fact_definition_id' => $def->id],
+                    ['attribute_id' => $def->id],
                     ['value' => $value]
                 );
 

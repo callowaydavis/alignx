@@ -14,7 +14,7 @@ class ComponentFact extends Model
 
     protected $fillable = [
         'component_id',
-        'fact_definition_id',
+        'attribute_id',
         'value',
     ];
 
@@ -23,8 +23,8 @@ class ComponentFact extends Model
         return $this->belongsTo(Component::class);
     }
 
-    public function factDefinition(): BelongsTo
+    public function attribute(): BelongsTo
     {
-        return $this->belongsTo(FactDefinition::class);
+        return $this->belongsTo(Attribute::class);
     }
 }

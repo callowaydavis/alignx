@@ -30,7 +30,7 @@ class ComponentHealthScore
         $component->loadMissing(['owner', 'facts', 'todos', 'roleAssignments']);
 
         $requiredFactDefs = FactSheetResolver::forComponentType($component->type)
-            ->flatMap(fn ($sheet) => $sheet->factDefinitions->filter(fn ($def) => $def->pivot->is_required))
+            ->flatMap(fn ($sheet) => $sheet->attributes->filter(fn ($def) => $def->pivot->is_required))
             ->unique('id');
 
         $requiredRoles = Role::query()
@@ -104,7 +104,7 @@ class ComponentHealthScore
         }
 
         // Missing required facts: −10 each, max −20
-        $existingFactDefIds = $this->component->facts->pluck('fact_definition_id');
+        $existingFactDefIds = $this->component->facts->pluck('attribute_id');
         $missingCount = $this->requiredFactDefs->filter(
             fn ($def) => ! $existingFactDefIds->contains($def->id)
         )->count();

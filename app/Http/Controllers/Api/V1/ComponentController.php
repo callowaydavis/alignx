@@ -16,7 +16,7 @@ class ComponentController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Component::query()->with(['facts.factDefinition', 'tags']);
+        $query = Component::query()->with(['facts.attribute', 'tags']);
 
         if (! $request->boolean('include_subcomponents')) {
             $query->rootLevel();
@@ -66,7 +66,7 @@ class ComponentController extends Controller
         $component->load([
             'parent',
             'subcomponents',
-            'facts.factDefinition',
+            'facts.attribute',
             'tags',
             'outgoingRelationships.targetComponent',
             'incomingRelationships.sourceComponent',

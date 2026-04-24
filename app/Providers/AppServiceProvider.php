@@ -2,14 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentType;
-use App\Models\FactDefinition;
 use App\Models\Tag;
 use App\Models\User;
+use App\Policies\AttributePolicy;
 use App\Policies\ComponentPolicy;
 use App\Policies\ComponentTypePolicy;
-use App\Policies\FactDefinitionPolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Event;
@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(Component::class, ComponentPolicy::class);
         Gate::policy(ComponentType::class, ComponentTypePolicy::class);
-        Gate::policy(FactDefinition::class, FactDefinitionPolicy::class);
+        Gate::policy(Attribute::class, AttributePolicy::class);
         Gate::policy(Tag::class, TagPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
 

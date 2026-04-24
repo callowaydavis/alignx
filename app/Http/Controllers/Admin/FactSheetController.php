@@ -6,8 +6,8 @@ use App\Enums\FactSheetConditionOperator;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreFactSheetRequest;
 use App\Http\Requests\UpdateFactSheetRequest;
+use App\Models\Attribute;
 use App\Models\ComponentType;
-use App\Models\FactDefinition;
 use App\Models\FactSheet;
 use App\Models\FactSheetCondition;
 use App\Models\Team;
@@ -23,7 +23,7 @@ class FactSheetController extends Controller
         $this->authorize('viewAny', FactSheet::class);
 
         $factSheets = FactSheet::query()
-            ->withCount('factDefinitions')
+            ->withCount('attributes')
             ->with(['componentTypes', 'teams'])
             ->orderBy('name')
             ->paginate(20);
@@ -63,14 +63,14 @@ class FactSheetController extends Controller
     {
         $this->authorize('view', $factSheet);
 
-        $factSheet->load(['factDefinitions', 'componentTypes', 'teams', 'conditions.factDefinition']);
+        $factSheet->load(['attributes', 'componentTypes', 'teams', 'conditions.attribute']);
 
-        $availableDefinitions = FactDefinition::query()
-            ->whereNotIn('id', $factSheet->factDefinitions->pluck('id'))
+        $availableDefinitions = Attribute::query()
+            ->whereNotIn('id', $factSheet->attributes->pluck('id'))
             ->orderBy('name')
             ->get();
 
-        $allDefinitions = FactDefinition::query()->orderBy('name')->get();
+        $allDefinitions = Attribute::query()->orderBy('name')->get();
         $operators = FactSheetConditionOperator::cases();
 
         return view('admin.fact-sheets.show', compact(
@@ -124,13 +124,13 @@ class FactSheetController extends Controller
         $this->authorize('update', $factSheet);
 
         $request->validate([
-            'fact_definition_id' => ['required', 'integer', 'exists:fact_definitions,id'],
+            'attribute_id' => ['required', 'integer', 'exists:attributes,id'],
             'is_required' => ['boolean'],
         ]);
 
-        $maxSort = $factSheet->factDefinitions()->max('sort_order') ?? -1;
+        $maxSort = $factSheet->attributes()->max('sort_order') ?? -1;
 
-        $factSheet->factDefinitions()->attach($request->integer('fact_definition_id'), [
+        $factSheet->attributes()->attach($request->integer('attribute_id'), [
             'is_required' => $request->boolean('is_required'),
             'sort_order' => $maxSort + 1,
         ]);
@@ -138,16 +138,16 @@ class FactSheetController extends Controller
         return back()->with('success', 'Field added to fact sheet.');
     }
 
-    public function removeDefinition(FactSheet $factSheet, FactDefinition $factDefinition): RedirectResponse
+    public function removeDefinition(FactSheet $factSheet, Attribute $attribute): RedirectResponse
     {
         $this->authorize('update', $factSheet);
 
-        $factSheet->factDefinitions()->detach($factDefinition->id);
+        $factSheet->attributes()->detach($attribute->id);
 
         return back()->with('success', 'Field removed from fact sheet.');
     }
 
-    public function updateDefinition(Request $request, FactSheet $factSheet, FactDefinition $factDefinition): RedirectResponse
+    public function updateDefinition(Request $request, FactSheet $factSheet, Attribute $attribute): RedirectResponse
     {
         $this->authorize('update', $factSheet);
 
@@ -155,7 +155,7 @@ class FactSheetController extends Controller
             'is_required' => ['required', 'boolean'],
         ]);
 
-        $factSheet->factDefinitions()->updateExistingPivot($factDefinition->id, [
+        $factSheet->attributes()->updateExistingPivot($attribute->id, [
             'is_required' => $request->boolean('is_required'),
         ]);
 
@@ -169,13 +169,13 @@ class FactSheetController extends Controller
         $this->authorize('update', $factSheet);
 
         $request->validate([
-            'fact_definition_id' => ['required', 'integer', 'exists:fact_definitions,id'],
+            'attribute_id' => ['required', 'integer', 'exists:attributes,id'],
             'operator' => ['required', 'string', 'in:'.implode(',', array_column(FactSheetConditionOperator::cases(), 'value'))],
             'value' => ['nullable', 'string', 'max:255'],
         ]);
 
         $factSheet->conditions()->create([
-            'fact_definition_id' => $request->integer('fact_definition_id'),
+            'attribute_id' => $request->integer('attribute_id'),
             'operator' => $request->string('operator')->value(),
             'value' => $request->string('value')->value() ?: null,
         ]);

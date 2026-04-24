@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attribute;
 use App\Models\Component;
-use App\Models\FactDefinition;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -11,9 +11,9 @@ class ExportController extends Controller
 {
     public function components(Request $request): StreamedResponse
     {
-        $factDefinitions = FactDefinition::query()->orderBy('name')->get();
+        $attributes = Attribute::query()->orderBy('name')->get();
 
-        $query = Component::query()->with(['owner', 'tags', 'facts.factDefinition']);
+        $query = Component::query()->with(['owner', 'tags', 'facts.attribute']);
 
         if ($request->filled('type')) {
             $query->where('type', $request->string('type'));
@@ -38,7 +38,7 @@ class ExportController extends Controller
             'Content-Disposition' => 'attachment; filename="components-'.now()->format('Y-m-d').'.csv"',
         ];
 
-        $callback = function () use ($components, $factDefinitions) {
+        $callback = function () use ($components, $attributes) {
             $handle = fopen('php://output', 'w');
 
             $columns = [
@@ -46,7 +46,7 @@ class ExportController extends Controller
                 'lifecycle_start_date', 'lifecycle_end_date', 'owner', 'tags',
             ];
 
-            foreach ($factDefinitions as $factDef) {
+            foreach ($attributes as $factDef) {
                 $columns[] = $factDef->name;
             }
 
@@ -65,8 +65,8 @@ class ExportController extends Controller
                     $component->tags->pluck('name')->join(','),
                 ];
 
-                foreach ($factDefinitions as $factDef) {
-                    $fact = $component->facts->firstWhere('fact_definition_id', $factDef->id);
+                foreach ($attributes as $factDef) {
+                    $fact = $component->facts->firstWhere('attribute_id', $factDef->id);
                     $row[] = $fact?->value;
                 }
 

@@ -2,17 +2,17 @@
 
 namespace App\Policies;
 
-use App\Models\FactDefinition;
+use App\Models\Attribute;
 use App\Models\User;
 
-class FactDefinitionPolicy
+class AttributePolicy
 {
     public function viewAny(User $user): bool
     {
         return true;
     }
 
-    public function view(User $user, FactDefinition $factDefinition): bool
+    public function view(User $user, Attribute $attribute): bool
     {
         return true;
     }
@@ -22,12 +22,12 @@ class FactDefinitionPolicy
         return $user->isAdmin();
     }
 
-    public function update(User $user, FactDefinition $factDefinition): bool
+    public function update(User $user, Attribute $attribute): bool
     {
         return $user->isAdmin();
     }
 
-    public function delete(User $user, FactDefinition $factDefinition): bool
+    public function delete(User $user, Attribute $attribute): bool
     {
         return $user->isAdmin();
     }

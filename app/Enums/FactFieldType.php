@@ -10,6 +10,9 @@ enum FactFieldType: string
     case Boolean = 'boolean';
     case Url = 'url';
     case Select = 'select';
+    case User = 'user';
+    case Group = 'group';
+    case UserOrGroup = 'user_or_group';
 
     public static function values(): array
     {
@@ -25,6 +28,9 @@ enum FactFieldType: string
             self::Boolean => 'Boolean (Yes/No)',
             self::Url => 'URL',
             self::Select => 'Select (Dropdown)',
+            self::User => 'User',
+            self::Group => 'Group',
+            self::UserOrGroup => 'User or Group',
         };
     }
 }

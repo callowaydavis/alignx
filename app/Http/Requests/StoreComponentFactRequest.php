@@ -18,7 +18,7 @@ class StoreComponentFactRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fact_definition_id' => ['required', 'integer', 'exists:fact_definitions,id'],
+            'attribute_id' => ['required', 'integer', 'exists:attributes,id'],
             'value' => ['nullable', 'string'],
         ];
     }

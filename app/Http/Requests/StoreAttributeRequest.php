@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class StoreFactDefinitionRequest extends FormRequest
+class StoreAttributeRequest extends FormRequest
 {
     public function authorize(): bool
     {

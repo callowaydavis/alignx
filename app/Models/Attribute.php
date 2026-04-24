@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use App\Enums\FactFieldType;
-use Database\Factories\FactDefinitionFactory;
+use Database\Factories\AttributeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class FactDefinition extends Model
+class Attribute extends Model
 {
-    /** @use HasFactory<FactDefinitionFactory> */
+    /** @use HasFactory<AttributeFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -35,7 +35,7 @@ class FactDefinition extends Model
 
     public function factSheets(): BelongsToMany
     {
-        return $this->belongsToMany(FactSheet::class, 'fact_sheet_fact_definition')
+        return $this->belongsToMany(FactSheet::class, 'attribute_fact_sheet', 'attribute_id', 'fact_sheet_id')
             ->withPivot(['is_required', 'sort_order'])
             ->withTimestamps();
     }

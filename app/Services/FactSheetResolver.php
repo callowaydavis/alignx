@@ -18,12 +18,12 @@ class FactSheetResolver
     public static function forComponent(Component $component, User $user): Collection
     {
         $factValuesByDefId = $component->facts
-            ->keyBy('fact_definition_id')
+            ->keyBy('attribute_id')
             ->map(fn ($f) => $f->value)
             ->all();
 
         $sheets = FactSheet::query()
-            ->with(['factDefinitions', 'componentTypes', 'teams', 'conditions'])
+            ->with(['attributes', 'componentTypes', 'teams', 'conditions'])
             ->get();
 
         return $sheets->filter(function (FactSheet $sheet) use ($component, $user, $factValuesByDefId) {
@@ -54,7 +54,7 @@ class FactSheetResolver
     public static function forComponentType(string $typeName): Collection
     {
         return FactSheet::query()
-            ->with(['factDefinitions', 'componentTypes'])
+            ->with(['attributes', 'componentTypes'])
             ->get()
             ->filter(fn (FactSheet $sheet) => $sheet->appliesToComponentType($typeName))
             ->values();

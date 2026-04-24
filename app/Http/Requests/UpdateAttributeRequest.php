@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class UpdateFactDefinitionRequest extends FormRequest
+class UpdateAttributeRequest extends FormRequest
 {
     public function authorize(): bool
     {

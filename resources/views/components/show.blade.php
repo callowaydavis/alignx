@@ -37,9 +37,9 @@
 
     {{-- Missing required facts / roles warning --}}
     @php
-        $existingFactDefIds = $component->facts->pluck('fact_definition_id');
+        $existingFactDefIds = $component->facts->pluck('attribute_id');
         $missingRequired = $applicableSheets
-            ->flatMap(fn ($sheet) => $sheet->factDefinitions->filter(fn ($fd) => $fd->pivot->is_required))
+            ->flatMap(fn ($sheet) => $sheet->attributes->filter(fn ($fd) => $fd->pivot->is_required))
             ->unique('id')
             ->whereNotIn('id', $existingFactDefIds)
             ->values();
@@ -110,6 +110,10 @@
                     {{ $component->todos->count() }}
                 </span>
             @endif
+        </button>
+        <button data-switch-tab="raci"
+                class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors border-transparent text-gray-500 hover:text-gray-700">
+            RACI
         </button>
     </div>
 
@@ -188,7 +192,7 @@
             {{-- Right: Facts & Relationships --}}
             <div class="col-span-2 space-y-6">
                 {{-- Fact Sheets --}}
-                @php $factValuesByDefId = $component->facts->keyBy('fact_definition_id'); @endphp
+                @php $factValuesByAttributeId = $component->facts->keyBy('attribute_id'); @endphp
 
                 <div class="bg-white rounded-xl border border-gray-200">
                     @if ($applicableSheets->isNotEmpty())
@@ -209,11 +213,11 @@
                                     <p class="px-5 pt-4 text-xs text-gray-400">{{ $sheet->description }}</p>
                                 @endif
 
-                                @if ($sheet->factDefinitions->isNotEmpty())
+                                @if ($sheet->attributes->isNotEmpty())
                                     <div class="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5">
-                                        @foreach ($sheet->factDefinitions->sortBy('pivot.sort_order') as $def)
+                                        @foreach ($sheet->attributes->sortBy('pivot.sort_order') as $def)
                                             @php
-                                                $existingFact = $factValuesByDefId->get($def->id);
+                                                $existingFact = $factValuesByAttributeId->get($def->id);
                                                 $currentValue = $existingFact?->value;
                                                 $isRequired = (bool) $def->pivot->is_required;
                                             @endphp
@@ -254,7 +258,7 @@
                                 @endif
 
                                 @can('update', $component)
-                                    @if ($sheet->factDefinitions->isNotEmpty())
+                                    @if ($sheet->attributes->isNotEmpty())
                                         <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 rounded-b-xl">
                                             <button type="button" data-open-modal="fs-modal-{{ $sheet->id }}"
                                                     class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
@@ -505,7 +509,7 @@
         {{-- Fact Sheet Edit Modals --}}
         @can('update', $component)
             @foreach ($applicableSheets as $sheet)
-                @if ($sheet->factDefinitions->isNotEmpty())
+                @if ($sheet->attributes->isNotEmpty())
                     <div id="fs-modal-{{ $sheet->id }}"
                          class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-50"
                          data-modal-backdrop="fs-modal-{{ $sheet->id }}">
@@ -528,9 +532,9 @@
                                   class="flex flex-col flex-1 min-h-0">
                                 @csrf
                                 <div class="overflow-y-auto flex-1 divide-y divide-gray-50">
-                                    @foreach ($sheet->factDefinitions->sortBy('pivot.sort_order') as $def)
+                                    @foreach ($sheet->attributes->sortBy('pivot.sort_order') as $def)
                                         @php
-                                            $existingFact = $factValuesByDefId->get($def->id);
+                                            $existingFact = $factValuesByAttributeId->get($def->id);
                                             $currentValue = $existingFact?->value;
                                             $fieldType = $def->field_type->value;
                                             $isRequired = (bool) $def->pivot->is_required;
@@ -556,6 +560,37 @@
                                                     @foreach ($def->options as $option)
                                                         <option value="{{ $option }}" @selected($currentValue === $option)>{{ $option }}</option>
                                                     @endforeach
+                                                </select>
+                                            @elseif ($fieldType === 'user')
+                                                <select id="{{ $inputId }}" name="{{ $inputName }}"
+                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <option value="">Select a user...</option>
+                                                    @foreach ($activeUsers as $user)
+                                                        <option value="{{ $user->id }}" @selected((string) $currentValue === (string) $user->id)>{{ $user->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($fieldType === 'group')
+                                                <select id="{{ $inputId }}" name="{{ $inputName }}"
+                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <option value="">Select a group...</option>
+                                                    @foreach ($allTeams as $team)
+                                                        <option value="{{ $team->id }}" @selected((string) $currentValue === (string) $team->id)>{{ $team->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($fieldType === 'user_or_group')
+                                                <select id="{{ $inputId }}" name="{{ $inputName }}"
+                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <option value="">Select a user or group...</option>
+                                                    <optgroup label="Users">
+                                                        @foreach ($activeUsers as $user)
+                                                            <option value="user:{{ $user->id }}" @selected($currentValue === 'user:'.$user->id)>{{ $user->name }}</option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                    <optgroup label="Groups">
+                                                        @foreach ($allTeams as $team)
+                                                            <option value="group:{{ $team->id }}" @selected($currentValue === 'group:'.$team->id)>{{ $team->name }}</option>
+                                                        @endforeach
+                                                    </optgroup>
                                                 </select>
                                             @elseif ($fieldType === 'date')
                                                 <input type="date" id="{{ $inputId }}" name="{{ $inputName }}"
@@ -649,6 +684,11 @@
     {{-- To Dos tab --}}
     <div data-tab-content="todos" class="hidden" id="todos">
         @include('components._todos')
+    </div>
+
+    {{-- RACI tab --}}
+    <div data-tab-content="raci" class="hidden" id="raci">
+        @include('components._raci')
     </div>
 
     {{-- History tab --}}
@@ -847,7 +887,7 @@
 
                     try {
                         const formData = new FormData();
-                        formData.append('fact_definition_id', defId);
+                        formData.append('attribute_id', defId);
                         formData.append('value', value);
 
                         const res = await fetch(storeUrl, {
@@ -859,7 +899,7 @@
                         if (!res.ok) { throw new Error('Request failed'); }
 
                         const { fact } = await res.json();
-                        const def = fact.fact_definition;
+                        const def = fact.attribute;
                         const deleteUrl = storeUrl + '/' + fact.id;
 
                         factsList.appendChild(buildFactRow(fact.id, def.id, def.name, def.field_type, def.options, fact.value, deleteUrl));

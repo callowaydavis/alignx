@@ -15,11 +15,11 @@ class ComponentFactResource extends JsonResource
         return [
             'id' => $this->id,
             'component_id' => $this->component_id,
-            'fact_definition_id' => $this->fact_definition_id,
+            'attribute_id' => $this->attribute_id,
             'value' => $this->value,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'fact_definition' => new FactDefinitionResource($this->whenLoaded('factDefinition')),
+            'attribute' => new AttributeResource($this->whenLoaded('attribute')),
         ];
     }
 }

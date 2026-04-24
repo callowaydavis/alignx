@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ComponentTypeController;
 use App\Http\Controllers\Admin\FactSheetController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\AttributeController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\ComponentController;
@@ -15,8 +16,8 @@ use App\Http\Controllers\ComponentRoleAssignmentController;
 use App\Http\Controllers\ComponentTodoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
-use App\Http\Controllers\FactDefinitionController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\RaciController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -66,7 +67,24 @@ Route::middleware('auth')->group(function () {
     Route::delete('components/{component}/documents/{document}', [ComponentDocumentController::class, 'destroy'])
         ->name('components.documents.destroy');
 
-    Route::resource('fact-definitions', FactDefinitionController::class)->except(['show']);
+    Route::post('components/{component}/raci/initialize', [RaciController::class, 'initializeMatrix'])
+        ->name('components.raci.initialize');
+    Route::post('components/{component}/raci/rows', [RaciController::class, 'addRow'])
+        ->name('components.raci.rows.store');
+    Route::patch('components/{component}/raci/assignments', [RaciController::class, 'updateAssignment'])
+        ->name('components.raci.assignments.update');
+    Route::delete('raci-rows/{row}', [RaciController::class, 'deleteRow'])
+        ->name('raci.rows.destroy');
+    Route::patch('raci-rows/{row}/notes', [RaciController::class, 'updateRowNotes'])
+        ->name('raci.rows.notes.update');
+    Route::patch('raci-columns/{column}/name', [RaciController::class, 'updateColumnName'])
+        ->name('raci.columns.name.update');
+    Route::post('components/{component}/raci/columns', [RaciController::class, 'addColumn'])
+        ->name('components.raci.columns.store');
+    Route::delete('raci-columns/{column}', [RaciController::class, 'deleteColumn'])
+        ->name('raci.columns.destroy');
+
+    Route::resource('attributes', AttributeController::class)->except(['show']);
 
     Route::resource('users', UserController::class)->except(['show']);
 
@@ -86,9 +104,9 @@ Route::middleware('auth')->group(function () {
             ->parameter('fact-sheets', 'factSheet');
         Route::post('fact-sheets/{factSheet}/definitions', [FactSheetController::class, 'addDefinition'])
             ->name('fact-sheets.definitions.add');
-        Route::delete('fact-sheets/{factSheet}/definitions/{factDefinition}', [FactSheetController::class, 'removeDefinition'])
+        Route::delete('fact-sheets/{factSheet}/definitions/{attribute}', [FactSheetController::class, 'removeDefinition'])
             ->name('fact-sheets.definitions.remove');
-        Route::patch('fact-sheets/{factSheet}/definitions/{factDefinition}', [FactSheetController::class, 'updateDefinition'])
+        Route::patch('fact-sheets/{factSheet}/definitions/{attribute}', [FactSheetController::class, 'updateDefinition'])
             ->name('fact-sheets.definitions.update');
         Route::post('fact-sheets/{factSheet}/conditions', [FactSheetController::class, 'addCondition'])
             ->name('fact-sheets.conditions.add');

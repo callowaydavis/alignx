@@ -50,7 +50,7 @@
                                 </div>
                             @endif
                         </td>
-                        <td class="px-6 py-4 text-gray-600">{{ $sheet->fact_definitions_count }}</td>
+                        <td class="px-6 py-4 text-gray-600">{{ $sheet->attributes_count }}</td>
                         <td class="px-6 py-4">
                             @if (empty($sheet->allowed_roles) && $sheet->teams->isEmpty())
                                 <span class="text-xs text-gray-400">Everyone</span>

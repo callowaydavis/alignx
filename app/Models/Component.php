@@ -116,4 +116,9 @@ class Component extends Model
     {
         return $this->hasMany(ComponentDocument::class);
     }
+
+    public function raciMatrix(): HasMany
+    {
+        return $this->hasMany(RaciMatrix::class);
+    }
 }

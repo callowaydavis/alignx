@@ -6,9 +6,9 @@ use App\Http\Requests\StoreComponentDocumentRequest;
 use App\Models\Component;
 use App\Models\ComponentDocument;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ComponentDocumentController extends Controller
 {
@@ -48,7 +48,7 @@ class ComponentDocumentController extends Controller
             ->withFragment('documents');
     }
 
-    public function show(Component $component, ComponentDocument $document): StreamedResponse
+    public function show(Component $component, ComponentDocument $document): Response
     {
         $this->authorize('view', $component);
 

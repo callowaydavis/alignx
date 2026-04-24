@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportComponentRequest;
+use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentType;
-use App\Models\FactDefinition;
 use App\Models\Tag;
 use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
@@ -42,7 +42,7 @@ class ImportController extends Controller
         $headers = array_map('trim', $headers);
 
         // Load lookups once before the loop
-        $factDefinitions = FactDefinition::query()
+        $attributes = Attribute::query()
             ->orderBy('name')
             ->get()
             ->keyBy(fn ($fd) => strtolower($fd->name));
@@ -62,7 +62,7 @@ class ImportController extends Controller
 
             $data = array_pad($data, count($headers), '');
             $row = array_combine($headers, array_slice($data, 0, count($headers)));
-            $rows[] = $this->validateRow($row, $rowCount, $factDefinitions, $validTypes);
+            $rows[] = $this->validateRow($row, $rowCount, $attributes, $validTypes);
         }
 
         fclose($handle);
@@ -121,9 +121,9 @@ class ImportController extends Controller
             }
 
             // Sync facts
-            foreach ($facts as $factDefinitionId => $value) {
+            foreach ($facts as $attributeId => $value) {
                 $component->facts()->updateOrCreate(
-                    ['fact_definition_id' => $factDefinitionId],
+                    ['attribute_id' => $attributeId],
                     ['value' => $value]
                 );
             }
@@ -135,11 +135,11 @@ class ImportController extends Controller
 
     /**
      * @param  array<string, string>  $row
-     * @param  Collection<string, FactDefinition>  $factDefinitions  keyed by lowercase name
+     * @param  Collection<string, Attribute>  $attributes  keyed by lowercase name
      * @param  array<string>  $validTypes
      * @return array{data: array<string, mixed>, errors: list<string>, action: string}
      */
-    private function validateRow(array $row, int $rowNumber, Collection $factDefinitions, array $validTypes): array
+    private function validateRow(array $row, int $rowNumber, Collection $attributes, array $validTypes): array
     {
         $errors = [];
         $data = [];
@@ -208,7 +208,7 @@ class ImportController extends Controller
                 continue;
             }
 
-            $fd = $factDefinitions->get(strtolower($header));
+            $fd = $attributes->get(strtolower($header));
             if ($fd && $value !== '') {
                 $facts[$fd->id] = $value;
             }

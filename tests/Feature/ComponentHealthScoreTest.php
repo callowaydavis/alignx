@@ -5,10 +5,10 @@ namespace Tests\Feature;
 use App\Enums\FactFieldType;
 use App\Enums\LifecycleStage;
 use App\Enums\TodoStatus;
+use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentTodo;
 use App\Models\ComponentType;
-use App\Models\FactDefinition;
 use App\Models\FactSheet;
 use App\Models\Team;
 use App\Services\ComponentHealthScore;
@@ -31,17 +31,17 @@ class ComponentHealthScoreTest extends TestCase
         return ComponentType::query()->firstOrCreate(['name' => $name], ['color' => 'gray']);
     }
 
-    private function makeRequiredFact(string $typeName, string $factName = 'Required Fact'): FactDefinition
+    private function makeRequiredFact(string $typeName, string $factName = 'Required Fact'): Attribute
     {
         $type = $this->makeType($typeName);
-        $def = FactDefinition::factory()->create([
+        $def = Attribute::factory()->create([
             'name' => $factName,
             'field_type' => FactFieldType::Text->value,
         ]);
 
         $sheet = FactSheet::factory()->create(['name' => "Sheet for {$factName}"]);
         $sheet->componentTypes()->attach($type->id);
-        $sheet->factDefinitions()->attach($def->id, ['is_required' => true, 'sort_order' => 0]);
+        $sheet->attributes()->attach($def->id, ['is_required' => true, 'sort_order' => 0]);
 
         return $def;
     }
@@ -150,7 +150,7 @@ class ComponentHealthScoreTest extends TestCase
         $def = $this->makeRequiredFact('Application', 'Fact A');
 
         $component = $this->perfectComponent();
-        $component->facts()->create(['fact_definition_id' => $def->id, 'value' => 'filled']);
+        $component->facts()->create(['attribute_id' => $def->id, 'value' => 'filled']);
 
         $hs = ComponentHealthScore::for($component);
 
@@ -397,7 +397,7 @@ class ComponentHealthScoreTest extends TestCase
 
         // Collect required fact definitions the same way the index page does
         $requiredFactDefs = FactSheetResolver::forComponentType($component->type)
-            ->flatMap(fn ($sheet) => $sheet->factDefinitions->filter(fn ($d) => $d->pivot->is_required))
+            ->flatMap(fn ($sheet) => $sheet->attributes->filter(fn ($d) => $d->pivot->is_required))
             ->unique('id');
 
         $hsBatch = ComponentHealthScore::withRequiredFacts($component, $requiredFactDefs);

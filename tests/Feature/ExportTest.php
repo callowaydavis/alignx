@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\ComponentType;
 use App\Enums\FactFieldType;
+use App\Models\Attribute;
 use App\Models\Component;
-use App\Models\FactDefinition;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,7 +28,7 @@ class ExportTest extends TestCase
 
     public function test_export_includes_fact_definition_names_as_headers(): void
     {
-        FactDefinition::factory()->create(['name' => 'CPU Cores', 'field_type' => FactFieldType::Number->value]);
+        Attribute::factory()->create(['name' => 'CPU Cores', 'field_type' => FactFieldType::Number->value]);
 
         $response = $this->get(route('components.export'));
 

@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\FactFieldType;
 use App\Enums\FactSheetConditionOperator;
+use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentType;
-use App\Models\FactDefinition;
 use App\Models\FactSheet;
 use App\Models\Team;
 use App\Models\User;
@@ -125,16 +125,16 @@ class RequiredFactsTest extends TestCase
     {
         $this->actingAsAdmin();
         $sheet = FactSheet::factory()->create();
-        $def = FactDefinition::factory()->create(['name' => 'Server Name', 'field_type' => FactFieldType::Text->value]);
+        $def = Attribute::factory()->create(['name' => 'Server Name', 'field_type' => FactFieldType::Text->value]);
 
         $this->post(route('admin.fact-sheets.definitions.add', $sheet), [
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'is_required' => true,
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('fact_sheet_fact_definition', [
+        $this->assertDatabaseHas('attribute_fact_sheet', [
             'fact_sheet_id' => $sheet->id,
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'is_required' => 1,
         ]);
     }
@@ -143,15 +143,15 @@ class RequiredFactsTest extends TestCase
     {
         $this->actingAsAdmin();
         $sheet = FactSheet::factory()->create();
-        $def = FactDefinition::factory()->create();
-        $sheet->factDefinitions()->attach($def->id, ['is_required' => false, 'sort_order' => 0]);
+        $def = Attribute::factory()->create();
+        $sheet->attributes()->attach($def->id, ['is_required' => false, 'sort_order' => 0]);
 
         $this->delete(route('admin.fact-sheets.definitions.remove', [$sheet, $def]))
             ->assertRedirect();
 
-        $this->assertDatabaseMissing('fact_sheet_fact_definition', [
+        $this->assertDatabaseMissing('attribute_fact_sheet', [
             'fact_sheet_id' => $sheet->id,
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
         ]);
     }
 
@@ -159,16 +159,16 @@ class RequiredFactsTest extends TestCase
     {
         $this->actingAsAdmin();
         $sheet = FactSheet::factory()->create();
-        $def = FactDefinition::factory()->create();
-        $sheet->factDefinitions()->attach($def->id, ['is_required' => false, 'sort_order' => 0]);
+        $def = Attribute::factory()->create();
+        $sheet->attributes()->attach($def->id, ['is_required' => false, 'sort_order' => 0]);
 
         $this->patch(route('admin.fact-sheets.definitions.update', [$sheet, $def]), [
             'is_required' => true,
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('fact_sheet_fact_definition', [
+        $this->assertDatabaseHas('attribute_fact_sheet', [
             'fact_sheet_id' => $sheet->id,
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'is_required' => 1,
         ]);
     }
@@ -179,17 +179,17 @@ class RequiredFactsTest extends TestCase
     {
         $this->actingAsAdmin();
         $sheet = FactSheet::factory()->create();
-        $def = FactDefinition::factory()->create();
+        $def = Attribute::factory()->create();
 
         $this->post(route('admin.fact-sheets.conditions.add', $sheet), [
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'operator' => FactSheetConditionOperator::Equals->value,
             'value' => 'Production',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('fact_sheet_conditions', [
             'fact_sheet_id' => $sheet->id,
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'operator' => 'equals',
             'value' => 'Production',
         ]);
@@ -199,9 +199,9 @@ class RequiredFactsTest extends TestCase
     {
         $this->actingAsAdmin();
         $sheet = FactSheet::factory()->create();
-        $def = FactDefinition::factory()->create();
+        $def = Attribute::factory()->create();
         $condition = $sheet->conditions()->create([
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'operator' => FactSheetConditionOperator::Equals->value,
             'value' => 'Production',
         ]);
@@ -274,8 +274,8 @@ class RequiredFactsTest extends TestCase
 
         $component = Component::factory()->create(['type' => 'Application']);
         $sheet = FactSheet::factory()->create(['allowed_roles' => null]);
-        $def = FactDefinition::factory()->create(['name' => 'Hosting Provider', 'field_type' => FactFieldType::Text->value]);
-        $sheet->factDefinitions()->attach($def->id, ['is_required' => false, 'sort_order' => 0]);
+        $def = Attribute::factory()->create(['name' => 'Hosting Provider', 'field_type' => FactFieldType::Text->value]);
+        $sheet->attributes()->attach($def->id, ['is_required' => false, 'sort_order' => 0]);
 
         $this->post(route('components.fact-sheets.submit', [$component, $sheet]), [
             'facts' => [$def->id => 'AWS'],
@@ -283,7 +283,7 @@ class RequiredFactsTest extends TestCase
 
         $this->assertDatabaseHas('component_facts', [
             'component_id' => $component->id,
-            'fact_definition_id' => $def->id,
+            'attribute_id' => $def->id,
             'value' => 'AWS',
         ]);
     }
@@ -295,8 +295,8 @@ class RequiredFactsTest extends TestCase
 
         $component = Component::factory()->create();
         $sheet = FactSheet::factory()->create(['allowed_roles' => null]);
-        $def = FactDefinition::factory()->create(['name' => 'Server Name', 'field_type' => FactFieldType::Text->value]);
-        $sheet->factDefinitions()->attach($def->id, ['is_required' => true, 'sort_order' => 0]);
+        $def = Attribute::factory()->create(['name' => 'Server Name', 'field_type' => FactFieldType::Text->value]);
+        $sheet->attributes()->attach($def->id, ['is_required' => true, 'sort_order' => 0]);
 
         $this->post(route('components.fact-sheets.submit', [$component, $sheet]), [])
             ->assertSessionHasErrors("facts.{$def->id}");
@@ -320,16 +320,16 @@ class RequiredFactsTest extends TestCase
 
     public function test_conditional_sheet_shown_when_condition_matches(): void
     {
-        $conditionDef = FactDefinition::factory()->create(['name' => 'Environment', 'field_type' => FactFieldType::Text->value]);
+        $conditionDef = Attribute::factory()->create(['name' => 'Environment', 'field_type' => FactFieldType::Text->value]);
         $sheet = FactSheet::factory()->create(['allowed_roles' => null]);
         $sheet->conditions()->create([
-            'fact_definition_id' => $conditionDef->id,
+            'attribute_id' => $conditionDef->id,
             'operator' => FactSheetConditionOperator::Equals->value,
             'value' => 'Production',
         ]);
 
         $component = Component::factory()->create(['type' => 'Application']);
-        $component->facts()->create(['fact_definition_id' => $conditionDef->id, 'value' => 'Production']);
+        $component->facts()->create(['attribute_id' => $conditionDef->id, 'value' => 'Production']);
 
         $user = User::factory()->editor()->create();
 
@@ -339,16 +339,16 @@ class RequiredFactsTest extends TestCase
 
     public function test_conditional_sheet_hidden_when_condition_does_not_match(): void
     {
-        $conditionDef = FactDefinition::factory()->create(['name' => 'Environment', 'field_type' => FactFieldType::Text->value]);
+        $conditionDef = Attribute::factory()->create(['name' => 'Environment', 'field_type' => FactFieldType::Text->value]);
         $sheet = FactSheet::factory()->create(['allowed_roles' => null]);
         $sheet->conditions()->create([
-            'fact_definition_id' => $conditionDef->id,
+            'attribute_id' => $conditionDef->id,
             'operator' => FactSheetConditionOperator::Equals->value,
             'value' => 'Production',
         ]);
 
         $component = Component::factory()->create(['type' => 'Application']);
-        $component->facts()->create(['fact_definition_id' => $conditionDef->id, 'value' => 'Staging']);
+        $component->facts()->create(['attribute_id' => $conditionDef->id, 'value' => 'Staging']);
 
         $user = User::factory()->editor()->create();
 

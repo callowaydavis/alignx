@@ -10,7 +10,7 @@ class FactSheetCondition extends Model
 {
     protected $fillable = [
         'fact_sheet_id',
-        'fact_definition_id',
+        'attribute_id',
         'operator',
         'value',
     ];
@@ -27,19 +27,19 @@ class FactSheetCondition extends Model
         return $this->belongsTo(FactSheet::class);
     }
 
-    public function factDefinition(): BelongsTo
+    public function attribute(): BelongsTo
     {
-        return $this->belongsTo(FactDefinition::class);
+        return $this->belongsTo(Attribute::class);
     }
 
     /**
      * Evaluate this condition against a component's existing fact values.
      *
-     * @param  array<int, string|null>  $factValuesByDefinitionId  map of fact_definition_id → value
+     * @param  array<int, string|null>  $factValuesByAttributeId  map of attribute_id → value
      */
-    public function evaluate(array $factValuesByDefinitionId): bool
+    public function evaluate(array $factValuesByAttributeId): bool
     {
-        $factValue = $factValuesByDefinitionId[$this->fact_definition_id] ?? null;
+        $factValue = $factValuesByAttributeId[$this->attribute_id] ?? null;
         $conditionValue = $this->value;
 
         return match ($this->operator) {

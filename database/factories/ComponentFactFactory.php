@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentFact;
-use App\Models\FactDefinition;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,7 +16,7 @@ class ComponentFactFactory extends Factory
     {
         return [
             'component_id' => Component::factory(),
-            'fact_definition_id' => FactDefinition::factory(),
+            'attribute_id' => Attribute::factory(),
             'value' => $this->faker->word(),
         ];
     }

@@ -39,7 +39,7 @@ class RoleTest extends TestCase
     {
         $this->actingAsEditor();
 
-        $this->post(route('fact-definitions.store'), [
+        $this->post(route('attributes.store'), [
             'name' => 'My Fact',
             'field_type' => FactFieldType::Text->value,
         ])->assertForbidden();
@@ -49,12 +49,12 @@ class RoleTest extends TestCase
     {
         $this->actingAsAdmin();
 
-        $this->post(route('fact-definitions.store'), [
+        $this->post(route('attributes.store'), [
             'name' => 'My Fact',
             'field_type' => FactFieldType::Text->value,
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('fact_definitions', ['name' => 'My Fact']);
+        $this->assertDatabaseHas('attributes', ['name' => 'My Fact']);
     }
 
     public function test_viewer_can_view_components(): void

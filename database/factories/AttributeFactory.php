@@ -3,13 +3,13 @@
 namespace Database\Factories;
 
 use App\Enums\FactFieldType;
-use App\Models\FactDefinition;
+use App\Models\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<FactDefinition>
+ * @extends Factory<Attribute>
  */
-class FactDefinitionFactory extends Factory
+class AttributeFactory extends Factory
 {
     public function definition(): array
     {

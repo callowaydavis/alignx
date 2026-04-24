@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\ComponentType;
+use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentFact;
 use App\Models\ComponentRelationship;
-use App\Models\FactDefinition;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -138,16 +138,16 @@ class ComponentTest extends TestCase
     public function test_can_add_fact_to_component(): void
     {
         $component = Component::factory()->create(['type' => ComponentType::ItComponent->value]);
-        $factDef = FactDefinition::factory()->create(['name' => 'Operating System']);
+        $factDef = Attribute::factory()->create(['name' => 'Operating System']);
 
         $this->post(route('components.facts.store', $component), [
-            'fact_definition_id' => $factDef->id,
+            'attribute_id' => $factDef->id,
             'value' => 'Ubuntu 22.04',
         ])->assertRedirect(route('components.show', $component));
 
         $this->assertDatabaseHas('component_facts', [
             'component_id' => $component->id,
-            'fact_definition_id' => $factDef->id,
+            'attribute_id' => $factDef->id,
             'value' => 'Ubuntu 22.04',
         ]);
     }
@@ -155,15 +155,15 @@ class ComponentTest extends TestCase
     public function test_adding_same_fact_twice_updates_value(): void
     {
         $component = Component::factory()->create();
-        $factDef = FactDefinition::factory()->create();
+        $factDef = Attribute::factory()->create();
 
         $this->post(route('components.facts.store', $component), [
-            'fact_definition_id' => $factDef->id,
+            'attribute_id' => $factDef->id,
             'value' => 'First',
         ]);
 
         $this->post(route('components.facts.store', $component), [
-            'fact_definition_id' => $factDef->id,
+            'attribute_id' => $factDef->id,
             'value' => 'Updated',
         ]);
 

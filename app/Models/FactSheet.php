@@ -27,9 +27,9 @@ class FactSheet extends Model
         ];
     }
 
-    public function factDefinitions(): BelongsToMany
+    public function attributes(): BelongsToMany
     {
-        return $this->belongsToMany(FactDefinition::class, 'fact_sheet_fact_definition')
+        return $this->belongsToMany(Attribute::class, 'attribute_fact_sheet', 'fact_sheet_id', 'attribute_id')
             ->withPivot(['is_required', 'sort_order'])
             ->withTimestamps()
             ->orderByPivot('sort_order');
