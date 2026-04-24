@@ -19,7 +19,10 @@ class ComponentTypeFactory extends Factory
     {
         return [
             'name' => $this->faker->unique()->words(2, true),
-            'color' => $this->faker->randomElement(['blue', 'purple', 'green', 'orange', 'teal', 'yellow', 'red', 'gray']),
+            'color' => $this->faker->randomElement([
+                'blue', 'purple', 'green', 'orange', 'teal', 'yellow', 'red', 'gray',
+                'sky', 'cyan', 'lime', 'emerald', 'rose', 'fuchsia', 'violet', 'amber', 'slate',
+            ]),
             'is_system' => false,
         ];
     }

@@ -12,7 +12,9 @@
         $colorOptions = [
             'blue' => 'Blue', 'purple' => 'Purple', 'green' => 'Green', 'orange' => 'Orange',
             'teal' => 'Teal', 'yellow' => 'Yellow', 'red' => 'Red', 'pink' => 'Pink',
-            'indigo' => 'Indigo', 'gray' => 'Gray',
+            'indigo' => 'Indigo', 'gray' => 'Gray', 'sky' => 'Sky', 'cyan' => 'Cyan',
+            'lime' => 'Lime', 'emerald' => 'Emerald', 'rose' => 'Rose', 'fuchsia' => 'Fuchsia',
+            'violet' => 'Violet', 'amber' => 'Amber', 'slate' => 'Slate',
         ];
         $badgeColors = [
             'blue' => 'bg-blue-100 text-blue-700', 'purple' => 'bg-purple-100 text-purple-700',
@@ -20,6 +22,11 @@
             'teal' => 'bg-teal-100 text-teal-700', 'yellow' => 'bg-yellow-100 text-yellow-700',
             'red' => 'bg-red-100 text-red-700', 'pink' => 'bg-pink-100 text-pink-700',
             'indigo' => 'bg-indigo-100 text-indigo-700', 'gray' => 'bg-gray-100 text-gray-700',
+            'sky' => 'bg-sky-100 text-sky-700', 'cyan' => 'bg-cyan-100 text-cyan-700',
+            'lime' => 'bg-lime-100 text-lime-700', 'emerald' => 'bg-emerald-100 text-emerald-700',
+            'rose' => 'bg-rose-100 text-rose-700', 'fuchsia' => 'bg-fuchsia-100 text-fuchsia-700',
+            'violet' => 'bg-violet-100 text-violet-700', 'amber' => 'bg-amber-100 text-amber-700',
+            'slate' => 'bg-slate-100 text-slate-700',
         ];
     @endphp
 
@@ -62,45 +69,46 @@
                     </span>
 
                     <div class="flex-1 min-w-0">
-                        @if (! $type->is_system)
-                            @can('update', $type)
-                                <form method="POST" action="{{ route('admin.component-types.update', $type) }}"
-                                      class="flex items-center gap-2">
-                                    @csrf @method('PATCH')
-                                    <input type="text" name="name" value="{{ $type->name }}"
-                                           class="text-sm text-gray-800 bg-transparent border-b border-transparent focus:border-gray-400 focus:outline-none w-40">
-                                    <select name="color"
-                                            class="text-xs border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                        @foreach ($colorOptions as $value => $label)
-                                            <option value="{{ $value }}" @selected($type->color === $value)>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="submit"
-                                            class="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Save
-                                    </button>
-                                </form>
-                            @endcan
-                        @else
-                            <span class="text-xs text-gray-400 italic">System type</span>
-                        @endif
+                        @can('update', $type)
+                            <form method="POST" action="{{ route('admin.component-types.update', $type) }}"
+                                  class="flex items-center gap-2">
+                                @csrf @method('PATCH')
+                                <input type="text" name="name" value="{{ $type->name }}"
+                                       class="text-sm text-gray-800 bg-transparent border-b border-transparent focus:border-gray-400 focus:outline-none w-40">
+                                <select name="color"
+                                        class="text-xs border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    @foreach ($colorOptions as $value => $label)
+                                        <option value="{{ $value }}" @selected($type->color === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit"
+                                        class="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Save
+                                </button>
+                            </form>
+                        @endcan
                     </div>
 
                     <div class="flex items-center gap-4 shrink-0">
                         <span class="text-xs text-gray-400">{{ $type->components_count }} component{{ $type->components_count !== 1 ? 's' : '' }}</span>
 
-                        @if (! $type->is_system)
-                            @can('delete', $type)
-                                <form method="POST" action="{{ route('admin.component-types.destroy', $type) }}">
-                                    @csrf @method('DELETE')
-                                    <button type="submit"
-                                            onclick="return confirm('Delete type \'{{ $type->name }}\'?')"
-                                            class="text-xs text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Delete
-                                    </button>
-                                </form>
-                            @endcan
-                        @endif
+                        @can('viewAny', App\Models\ComponentType::class)
+                            <a href="{{ route('admin.component-types.show', $type) }}"
+                               class="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                                Manage →
+                            </a>
+                        @endcan
+
+                        @can('delete', $type)
+                            <form method="POST" action="{{ route('admin.component-types.destroy', $type) }}">
+                                @csrf @method('DELETE')
+                                <button type="submit"
+                                        onclick="return confirm('Delete type \'{{ $type->name }}\'?')"
+                                        class="text-xs text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Delete
+                                </button>
+                            </form>
+                        @endcan
                     </div>
                 </div>
             @empty

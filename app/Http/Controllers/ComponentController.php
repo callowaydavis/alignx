@@ -252,6 +252,21 @@ class ComponentController extends Controller
     {
         $this->authorize('update', $component);
 
+        $sourceType = ComponentType::query()
+            ->where('name', $component->type)
+            ->with('allowedTargetTypes')
+            ->first();
+
+        if ($sourceType && $sourceType->allowedTargetTypes->isNotEmpty()) {
+            $targetComponent = Component::findOrFail($request->integer('target_component_id'));
+
+            if (! $sourceType->allowedTargetTypes->pluck('name')->contains($targetComponent->type)) {
+                return back()->withErrors([
+                    'target_component_id' => "\"{$component->type}\" components cannot relate to \"{$targetComponent->type}\" components.",
+                ])->withInput();
+            }
+        }
+
         $rel = $component->outgoingRelationships()->create([
             'target_component_id' => $request->integer('target_component_id'),
             'relationship_type' => $request->string('relationship_type')->value() ?: null,

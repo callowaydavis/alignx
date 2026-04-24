@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ComponentType;
+use App\Enums\ComponentType as ComponentTypeEnum;
 use App\Models\Attribute;
 use App\Models\Component;
 use App\Models\ComponentFact;
 use App\Models\ComponentRelationship;
+use App\Models\ComponentType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,8 +32,8 @@ class ComponentTest extends TestCase
 
     public function test_components_index_filters_by_type(): void
     {
-        Component::factory()->create(['type' => ComponentType::Application->value, 'name' => 'App One']);
-        Component::factory()->create(['type' => ComponentType::ItComponent->value, 'name' => 'Server One']);
+        Component::factory()->create(['type' => ComponentTypeEnum::Application->value, 'name' => 'App One']);
+        Component::factory()->create(['type' => ComponentTypeEnum::ItComponent->value, 'name' => 'Server One']);
 
         $response = $this->get(route('components.index', ['type' => 'Application']));
 
@@ -48,7 +49,7 @@ class ComponentTest extends TestCase
     {
         $response = $this->post(route('components.store'), [
             'name' => 'My Application',
-            'type' => ComponentType::Application->value,
+            'type' => ComponentTypeEnum::Application->value,
             'description' => 'A test application',
         ]);
 
@@ -89,7 +90,7 @@ class ComponentTest extends TestCase
 
         $this->put(route('components.update', $component), [
             'name' => 'New Name',
-            'type' => ComponentType::Provider->value,
+            'type' => ComponentTypeEnum::Provider->value,
         ])->assertRedirect(route('components.show', $component));
 
         $this->assertDatabaseHas('components', ['id' => $component->id, 'name' => 'New Name', 'type' => 'Provider']);
@@ -133,11 +134,51 @@ class ComponentTest extends TestCase
         $this->assertDatabaseMissing('component_relationships', ['id' => $rel->id]);
     }
 
+    public function test_relationship_blocked_by_type_rule(): void
+    {
+        $sourceType = ComponentType::factory()->create(['name' => 'ServiceA']);
+        $targetType = ComponentType::factory()->create(['name' => 'ServiceB']);
+        $blockedType = ComponentType::factory()->create(['name' => 'ServiceC']);
+
+        $sourceType->allowedTargetTypes()->sync([$targetType->id]);
+
+        $source = Component::factory()->create(['type' => 'ServiceA']);
+        $blocked = Component::factory()->create(['type' => 'ServiceC']);
+
+        $this->post(route('components.relationships.store', $source), [
+            'target_component_id' => $blocked->id,
+            'relationship_type' => 'depends on',
+        ])->assertSessionHasErrors('target_component_id');
+
+        $this->assertDatabaseMissing('component_relationships', [
+            'source_component_id' => $source->id,
+            'target_component_id' => $blocked->id,
+        ]);
+    }
+
+    public function test_relationship_allowed_when_no_rules_defined(): void
+    {
+        $sourceType = ComponentType::factory()->create(['name' => 'TypeX']);
+
+        $source = Component::factory()->create(['type' => 'TypeX']);
+        $target = Component::factory()->create();
+
+        $this->post(route('components.relationships.store', $source), [
+            'target_component_id' => $target->id,
+            'relationship_type' => 'relates to',
+        ])->assertRedirect(route('components.show', $source));
+
+        $this->assertDatabaseHas('component_relationships', [
+            'source_component_id' => $source->id,
+            'target_component_id' => $target->id,
+        ]);
+    }
+
     // --- Facts ---
 
     public function test_can_add_fact_to_component(): void
     {
-        $component = Component::factory()->create(['type' => ComponentType::ItComponent->value]);
+        $component = Component::factory()->create(['type' => ComponentTypeEnum::ItComponent->value]);
         $factDef = Attribute::factory()->create(['name' => 'Operating System']);
 
         $this->post(route('components.facts.store', $component), [
@@ -194,7 +235,7 @@ class ComponentTest extends TestCase
     {
         $response = $this->postJson('/api/v1/components', [
             'name' => 'API Component',
-            'type' => ComponentType::DataObject->value,
+            'type' => ComponentTypeEnum::DataObject->value,
         ]);
 
         $response->assertCreated();
@@ -214,7 +255,7 @@ class ComponentTest extends TestCase
 
         $this->putJson("/api/v1/components/{$component->id}", [
             'name' => 'Updated',
-            'type' => ComponentType::Process->value,
+            'type' => ComponentTypeEnum::Process->value,
         ])->assertOk()->assertJsonPath('data.name', 'Updated');
     }
 
@@ -228,8 +269,8 @@ class ComponentTest extends TestCase
 
     public function test_api_filters_components_by_type(): void
     {
-        Component::factory()->create(['type' => ComponentType::Application->value]);
-        Component::factory()->create(['type' => ComponentType::ItComponent->value]);
+        Component::factory()->create(['type' => ComponentTypeEnum::Application->value]);
+        Component::factory()->create(['type' => ComponentTypeEnum::ItComponent->value]);
 
         $this->getJson('/api/v1/components?type=Application')
             ->assertOk()
@@ -256,7 +297,7 @@ class ComponentTest extends TestCase
 
         $response = $this->post(route('components.store'), [
             'name' => 'Workflow Module',
-            'type' => ComponentType::Application->value,
+            'type' => ComponentTypeEnum::Application->value,
             'parent_id' => $parent->id,
         ]);
 
@@ -365,7 +406,7 @@ class ComponentTest extends TestCase
 
         $this->post(route('components.store'), [
             'name' => 'Grandchild',
-            'type' => ComponentType::Application->value,
+            'type' => ComponentTypeEnum::Application->value,
             'parent_id' => $sub->id,
         ])->assertSessionHasErrors(['parent_id']);
     }
@@ -385,7 +426,7 @@ class ComponentTest extends TestCase
     {
         $this->post(route('components.store'), [
             'name' => 'Test Component',
-            'type' => ComponentType::Application->value,
+            'type' => ComponentTypeEnum::Application->value,
             'parent_id' => 99999,
         ])->assertSessionHasErrors(['parent_id']);
     }

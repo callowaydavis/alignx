@@ -97,8 +97,12 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('index');
         Route::resource('tags', TagController::class)->except(['show', 'create', 'edit']);
-        Route::resource('component-types', ComponentTypeController::class)->except(['show', 'create', 'edit'])
+        Route::resource('component-types', ComponentTypeController::class)->except(['create', 'edit'])
             ->parameter('component-types', 'componentType');
+        Route::patch(
+            'component-types/{componentType}/relationship-rules',
+            [ComponentTypeController::class, 'updateRelationshipRules']
+        )->name('component-types.relationship-rules.update');
         Route::resource('roles', RoleController::class)->except(['show']);
         Route::resource('fact-sheets', FactSheetController::class)
             ->parameter('fact-sheets', 'factSheet');

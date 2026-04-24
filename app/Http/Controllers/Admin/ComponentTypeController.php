@@ -25,7 +25,7 @@ class ComponentTypeController extends Controller
 
         $request->validate([
             'name' => ['required', 'string', 'max:100', 'unique:component_types,name'],
-            'color' => ['required', 'string', 'in:blue,purple,green,orange,teal,yellow,red,pink,indigo,gray'],
+            'color' => ['required', 'string', 'in:blue,purple,green,orange,teal,yellow,red,pink,indigo,gray,sky,cyan,lime,emerald,rose,fuchsia,violet,amber,slate'],
         ]);
 
         ComponentType::query()->create([
@@ -42,11 +42,9 @@ class ComponentTypeController extends Controller
     {
         $this->authorize('update', $componentType);
 
-        abort_if($componentType->is_system, 403, 'System types cannot be modified.');
-
         $request->validate([
             'name' => ['required', 'string', 'max:100', 'unique:component_types,name,'.$componentType->id],
-            'color' => ['required', 'string', 'in:blue,purple,green,orange,teal,yellow,red,pink,indigo,gray'],
+            'color' => ['required', 'string', 'in:blue,purple,green,orange,teal,yellow,red,pink,indigo,gray,sky,cyan,lime,emerald,rose,fuchsia,violet,amber,slate'],
         ]);
 
         $componentType->update([
@@ -54,24 +52,54 @@ class ComponentTypeController extends Controller
             'color' => $request->string('color'),
         ]);
 
-        return redirect()->route('admin.component-types.index')
+        return redirect()->route('admin.component-types.show', $componentType)
             ->with('success', 'Component type updated.');
+    }
+
+    public function show(ComponentType $componentType): View
+    {
+        $this->authorize('viewAny', ComponentType::class);
+
+        $componentType->load('allowedTargetTypes');
+        $allTypes = ComponentType::query()->orderBy('name')->get();
+
+        return view('admin.component-types.show', compact('componentType', 'allTypes'));
     }
 
     public function destroy(ComponentType $componentType): RedirectResponse
     {
         $this->authorize('delete', $componentType);
 
-        abort_if($componentType->is_system, 403, 'System types cannot be deleted.');
+        $count = $componentType->components()->count();
 
-        if ($componentType->components()->exists()) {
+        if ($count > 0) {
             return redirect()->route('admin.component-types.index')
-                ->withErrors(['type' => "Cannot delete \"{$componentType->name}\" — it is used by {$componentType->components_count} component(s)."]);
+                ->withErrors(['type' => "Cannot delete \"{$componentType->name}\" — it is used by {$count} component(s)."]);
         }
 
         $componentType->delete();
 
         return redirect()->route('admin.component-types.index')
             ->with('success', 'Component type deleted.');
+    }
+
+    public function updateRelationshipRules(Request $request, ComponentType $componentType): RedirectResponse
+    {
+        $this->authorize('update', $componentType);
+
+        $request->validate([
+            'allowed_type_ids' => ['nullable', 'array'],
+            'allowed_type_ids.*' => ['integer', 'exists:component_types,id'],
+        ]);
+
+        $ids = collect($request->input('allowed_type_ids', []))
+            ->filter(fn ($id) => (int) $id !== $componentType->id)
+            ->values()
+            ->all();
+
+        $componentType->allowedTargetTypes()->sync($ids);
+
+        return redirect()->route('admin.component-types.show', $componentType)
+            ->with('success', 'Relationship rules updated.');
     }
 }
