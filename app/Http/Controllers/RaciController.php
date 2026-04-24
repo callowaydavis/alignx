@@ -26,6 +26,10 @@ class RaciController extends Controller
                     'name' => $name,
                     'sort_order' => $order,
                 ]));
+
+            $component->recordAudit('raci_matrix_initialized', [], [
+                'message' => 'RACI matrix created with default columns',
+            ]);
         }
 
         return response()->json(['success' => true, 'matrix_id' => $matrix->id]);
@@ -46,6 +50,10 @@ class RaciController extends Controller
             'sort_order' => $maxSort + 1,
         ]);
 
+        $component->recordAudit('raci_responsibility_added', [], [
+            'responsibility' => $row->responsibility,
+        ]);
+
         return response()->json(['success' => true, 'row' => $row]);
     }
 
@@ -56,7 +64,16 @@ class RaciController extends Controller
 
         $request->validate(['notes' => 'nullable|string']);
 
-        $row->update(['notes' => $request->string('notes')->value() ?: null]);
+        $oldNotes = $row->notes;
+        $newNotes = $request->string('notes')->value() ?: null;
+        $row->update(['notes' => $newNotes]);
+
+        if ($oldNotes !== $newNotes) {
+            $row->matrix->component->recordAudit('raci_responsibility_notes_updated', [], [
+                'responsibility' => $row->responsibility,
+                'notes' => $newNotes,
+            ]);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -65,6 +82,11 @@ class RaciController extends Controller
     {
         $row->load('matrix');
         $this->authorize('update', $row->matrix->component);
+
+        $component = $row->matrix->component;
+        $component->recordAudit('raci_responsibility_removed', [
+            'responsibility' => $row->responsibility,
+        ], []);
 
         $row->delete();
 
@@ -91,17 +113,29 @@ class RaciController extends Controller
         }
 
         if ($request->filled('assigned_to_type') && $request->filled('assigned_to_id')) {
-            RaciAssignment::updateOrCreate(
+            $assignment = RaciAssignment::updateOrCreate(
                 ['raci_row_id' => $row->id, 'raci_column_id' => $column->id],
                 [
                     'assigned_to_type' => $request->string('assigned_to_type'),
                     'assigned_to_id' => $request->integer('assigned_to_id'),
                 ]
             );
+
+            $assignedName = $assignment->getAssignedName();
+            $component->recordAudit('raci_assignment_updated', [], [
+                'responsibility' => $row->responsibility,
+                'column' => $column->name,
+                'assigned_to' => $assignedName,
+            ]);
         } else {
             RaciAssignment::where('raci_row_id', $row->id)
                 ->where('raci_column_id', $column->id)
                 ->delete();
+
+            $component->recordAudit('raci_assignment_removed', [
+                'responsibility' => $row->responsibility,
+                'column' => $column->name,
+            ], []);
         }
 
         return response()->json(['success' => true]);
@@ -114,7 +148,17 @@ class RaciController extends Controller
 
         $request->validate(['name' => 'required|string|max:255']);
 
-        $column->update(['name' => $request->string('name')]);
+        $oldName = $column->name;
+        $newName = $request->string('name');
+        $column->update(['name' => $newName]);
+
+        if ($oldName !== $newName) {
+            $column->matrix->component->recordAudit('raci_column_renamed', [
+                'old_name' => $oldName,
+            ], [
+                'new_name' => $newName,
+            ]);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -133,6 +177,10 @@ class RaciController extends Controller
             'sort_order' => $maxSort + 1,
         ]);
 
+        $component->recordAudit('raci_column_added', [], [
+            'column_name' => $column->name,
+        ]);
+
         return response()->json(['success' => true, 'column' => $column]);
     }
 
@@ -140,6 +188,11 @@ class RaciController extends Controller
     {
         $column->load('matrix');
         $this->authorize('update', $column->matrix->component);
+
+        $component = $column->matrix->component;
+        $component->recordAudit('raci_column_removed', [
+            'column_name' => $column->name,
+        ], []);
 
         $column->delete();
 
